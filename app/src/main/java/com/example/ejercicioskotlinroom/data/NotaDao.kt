@@ -68,6 +68,44 @@ interface NotaDao {
     @Delete
     suspend fun eliminar(nota: NotaEntity): Int
 
+    // ---------- EJERCICIO 8: búsquedas, filtros, orden y conteos (todo resuelto en SQL) ----------
+    // 1) búsqueda por parte del título. `||` concatena en SQL: queda LIKE '%texto%'.
+    //    :texto entra como parámetro enlazado (Room lo pasa como argumento, no pega el texto en el SQL).
+    @Query("""
+        SELECT * FROM notas
+        WHERE titulo LIKE '%' || :texto || '%'
+        ORDER BY creadaEn DESC
+    """)
+    fun buscarPorTitulo(texto: String): Flow<List<NotaEntity>>
+
+    // 2) solo importantes
+    @Query("SELECT * FROM notas WHERE importante = 1 ORDER BY creadaEn DESC")
+    fun observarImportantes(): Flow<List<NotaEntity>>
+
+    // 3) orden ascendente por fecha (el descendente es observarNotas())
+    @Query("SELECT * FROM notas ORDER BY creadaEn ASC")
+    fun observarAscendente(): Flow<List<NotaEntity>>
+
+    // 4) y 5) cantidades: las calcula SQLite y salen como Flow, así se actualizan solas.
+    @Query("SELECT COUNT(*) FROM notas")
+    fun observarCantidad(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM notas WHERE importante = 1")
+    fun observarCantidadImportantes(): Flow<Int>
+
+    // Consulta combinada que usa la pantalla: búsqueda + filtro + orden en UNA sola consulta.
+    // Orden de evaluación en SQL: FROM -> WHERE (filtra filas) -> ORDER BY (ordena lo que quedó).
+    // El truco de los dos CASE: solo uno de los dos tiene valor, el otro es NULL y no influye en el orden.
+    @Query("""
+        SELECT * FROM notas
+        WHERE titulo LIKE '%' || :texto || '%'
+          AND (:soloImportantes = 0 OR importante = 1)
+        ORDER BY
+          CASE WHEN :ascendente = 1 THEN creadaEn END ASC,
+          CASE WHEN :ascendente = 0 THEN creadaEn END DESC
+    """)
+    fun filtrar(texto: String, soloImportantes: Boolean, ascendente: Boolean): Flow<List<NotaEntity>>
+
     // Pensada para pruebas controladas: deja la tabla vacía.
     @Query("DELETE FROM notas")
     suspend fun borrarTodas()

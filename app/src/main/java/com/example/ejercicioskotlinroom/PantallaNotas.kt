@@ -11,12 +11,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +38,31 @@ import com.example.ejercicioskotlinroom.data.NotaEntity
 import kotlinx.coroutines.launch
 
 /*
+ * EJERCICIO 8 - Consultas que empiezan a parecerse a una app real (sobre lo anterior)
+ *
+ * Buscador por título + filtro "solo importantes" + botón de orden por fecha + contadores.
+ * Todo el filtrado ocurre en SQL (NotaDao.filtrar); la pantalla no trae toda la tabla para filtrarla en Kotlin.
+ * El DAO cubre los 5 puntos de la consigna: buscarPorTitulo, observarImportantes, orden asc/desc,
+ * observarCantidad y observarCantidadImportantes. La pantalla usa la versión combinada (filtrar) para poder
+ * mezclar búsqueda, filtro y orden a la vez, y los dos contadores que salen de COUNT(*), no de números llevados a mano.
+ *
+ * PREGUNTAS DEL EJERCICIO 8
+ * 1) ¿Qué ventaja tiene filtrar en SQL en vez de traer todo y usar filter?
+ *    SQLite recorre y descarta filas en el motor (y puede usar índices): a la app solo llega el resultado.
+ *    Con filter en Kotlin se cargan TODAS las filas a memoria y se crean todos los objetos para tirar la mayoría.
+ *    Con miles de notas eso es memoria y tiempo de más.
+ * 2) ¿Cómo entra el parámetro :texto en la consulta?
+ *    Room toma el parámetro del método con el mismo nombre (texto) y lo manda como argumento enlazado (bind arg);
+ *    no concatena el String en el SQL. Eso evita inyección SQL y deja al motor reutilizar la consulta.
+ * 3) ¿Diferencia entre ordenar en SQL y ordenar la lista en memoria?
+ *    En SQL ordena el motor antes de devolver las filas (y puede apoyarse en un índice); en memoria hay que cargar
+ *    todo primero y ordenar con CPU de la app. Además el Flow ya emite la lista ordenada.
+ * 4) ¿Qué consulta podría beneficiarse de un índice si la tabla creciera mucho?
+ *    El ORDER BY creadaEn (se usa en todas las consultas) y el filtro por importante. LIKE '%texto%' con el comodín
+ *    adelante NO aprovecha un índice común sobre titulo (hace falta recorrer todo). Los índices reales se agregan
+ *    en el ejercicio 10.
+ *
+ * ---- (Texto del ejercicio 7, sigue valiendo) ----
  * EJERCICIO 7 - CRUD completo: editar y eliminar (sobre lo del ej. 5 y 6)
  *
  * DAO nuevo: @Update actualizar(nota) y @Delete eliminar(nota).
@@ -189,15 +217,27 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
     var notaEnEdicion by remember { mutableStateOf<NotaEntity?>(null) }
     var notaPorBorrar by remember { mutableStateOf<NotaEntity?>(null) }
 
-    // Ej. 6: la lista viene de un Flow. remember(dao) evita crear el Flow de nuevo en cada recomposición.
-    val notas by remember(dao) { dao.observarNotas() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    // Ej. 8: parámetros de búsqueda. Son estado de UI (rememberSaveable), la base no sabe de ellos.
+    var busqueda by rememberSaveable { mutableStateOf("") }
+    var soloImportantes by rememberSaveable { mutableStateOf(false) }
+    var ascendente by rememberSaveable { mutableStateOf(false) }
+
+    // Ej. 6 + 8: la lista viene de un Flow. Cuando cambia cualquiera de los 3 parámetros, remember(...) crea
+    // el Flow de la consulta nueva y collectAsStateWithLifecycle pasa a recolectar ese.
+    val notas by remember(dao, busqueda, soloImportantes, ascendente) {
+        dao.filtrar(busqueda.trim(), soloImportantes, ascendente)
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
+
+    // Contadores: salen de COUNT(*) en SQL, no los mantengo a mano.
+    val total by remember(dao) { dao.observarCantidad() }.collectAsStateWithLifecycle(initialValue = 0)
+    val totalImportantes by remember(dao) { dao.observarCantidadImportantes() }.collectAsStateWithLifecycle(initialValue = 0)
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Ejercicio 7 - CRUD de notas", style = MaterialTheme.typography.titleLarge)
+            Text("Ejercicio 8 - Búsqueda y filtros", style = MaterialTheme.typography.titleLarge)
 
             OutlinedTextField(
                 value = titulo,
@@ -238,9 +278,31 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
 
             mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
-            Text("Notas guardadas: ${notas.size}", style = MaterialTheme.typography.titleMedium)
+            HorizontalDivider()
+            OutlinedTextField(
+                value = busqueda,
+                onValueChange = { busqueda = it },
+                label = { Text("Buscar por título") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                FilterChip(
+                    selected = soloImportantes,
+                    onClick = { soloImportantes = !soloImportantes },
+                    label = { Text("Solo importantes") }
+                )
+                OutlinedButton(onClick = { ascendente = !ascendente }) {
+                    Text(if (ascendente) "Más viejas primero" else "Más nuevas primero")
+                }
+            }
+            Text(
+                "Total: $total - Importantes: $totalImportantes - Mostrando: ${notas.size}",
+                style = MaterialTheme.typography.titleMedium
+            )
             if (notas.isEmpty()) {
-                Text("Todavía no hay notas")
+                // Dos vacíos distintos: tabla vacía vs. ninguna coincidencia con el filtro.
+                Text(if (total == 0) "Todavía no hay notas" else "Ninguna nota coincide con la búsqueda")
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     items(notas, key = { it.id }) { nota ->
