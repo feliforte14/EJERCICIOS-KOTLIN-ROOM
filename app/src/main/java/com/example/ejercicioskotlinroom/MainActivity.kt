@@ -18,9 +18,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             EjerciciosKotlinRoomTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Ejercicio 4: pantalla de prueba para insertar notas y mirarlas en Database Inspector.
-                    // La base es única: viene de la Application, no se crea acá.
-                    PruebaBase(dao = (application as NotasApp).database.notaDao(), modifier = Modifier.padding(innerPadding))
+                    // Ejercicio 5: formulario real de alta de notas. La base es única: viene de la Application.
+                    PantallaNotas(dao = (application as NotasApp).database.notaDao(), modifier = Modifier.padding(innerPadding))
                 }
             }
         }
