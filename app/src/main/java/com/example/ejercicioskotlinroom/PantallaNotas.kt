@@ -11,33 +11,41 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.ejercicioskotlinroom.data.NotaDao
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ejercicioskotlinroom.data.NotaEntity
-import kotlinx.coroutines.launch
 
 /*
+ * EJERCICIO 9 - Poner orden: Repository, ViewModel y Room
+ *
+ * La pantalla ahora se parece a la del ej. 8 (mismo comportamiento) pero ya NO conoce el DAO:
+ *   Compose UI -> NotasViewModel -> NotaRepository -> NotaDao -> Room
+ * Las funciones sueltas guardarNota()/actualizarNota() que vivían acá pasaron al ViewModel y al Repository.
+ * Lo único que queda en la UI es estado puramente visual: el borrador del formulario, qué diálogo está abierto.
+ * Las respuestas a las preguntas del ejercicio están en NotaRepository.kt y NotasViewModel.kt.
+ *
+ * ---- (Texto del ejercicio 8, sigue valiendo) ----
  * EJERCICIO 8 - Consultas que empiezan a parecerse a una app real (sobre lo anterior)
  *
  * Buscador por título + filtro "solo importantes" + botón de orden por fecha + contadores.
@@ -164,80 +172,56 @@ import kotlinx.coroutines.launch
  *    Cuando haya ViewModel (ej. 9), el lugar correcto es viewModelScope.
  */
 
-// Función intermedia: valida, arma la entidad y la inserta. Devuelve el id nuevo o null si el título es inválido.
-suspend fun guardarNota(
-    dao: NotaDao,
-    titulo: String,
-    contenido: String,
-    importante: Boolean
-): Long? {
-    val tituloLimpio = titulo.trim()
-    if (tituloLimpio.isEmpty()) return null // validación 1: nada de títulos vacíos
-    return dao.insertar(
-        NotaEntity(
-            titulo = tituloLimpio,                  // validación 2: sin espacios al comienzo/final
-            contenido = contenido.trim(),
-            importante = importante,
-            creadaEn = System.currentTimeMillis()   // se genera acá, no en la UI
-        )
-    )
-}
-
-// Ej. 7: edición. copy() conserva id, creadaEn y colorEtiqueta; solo cambia lo que se editó.
-// Así @Update apunta a la MISMA fila. Devuelve false si el título es inválido o la fila ya no existe.
-suspend fun actualizarNota(
-    dao: NotaDao,
-    original: NotaEntity,
-    titulo: String,
-    contenido: String,
-    importante: Boolean
-): Boolean {
-    val tituloLimpio = titulo.trim()
-    if (tituloLimpio.isEmpty()) return false
-    val filas = dao.actualizar(
-        original.copy(titulo = tituloLimpio, contenido = contenido.trim(), importante = importante)
-    )
-    return filas == 1
-}
-
 @Composable
-fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
-    val scope = rememberCoroutineScope()
+fun PantallaNotas(
+    modifier: Modifier = Modifier,
+    // viewModel(factory) devuelve el MISMO ViewModel tras rotaciones: por eso el estado sobrevive.
+    viewModel: NotasViewModel = viewModel(factory = NotasViewModel.Factory)
+) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Borrador del formulario: es estado de UI, por eso rememberSaveable (sobrevive a la rotación).
+    // Borrador del formulario: estado de UI efímero -> rememberSaveable, no va al ViewModel ni a la base.
     var titulo by rememberSaveable { mutableStateOf("") }
     var contenido by rememberSaveable { mutableStateOf("") }
     var importante by rememberSaveable { mutableStateOf(false) }
 
-    var mensaje by remember { mutableStateOf<String?>(null) }
-    var guardando by remember { mutableStateOf(false) }
-
-    // Ej. 7: estado de UI temporal (nada de esto va a la base).
     var notaEnEdicion by remember { mutableStateOf<NotaEntity?>(null) }
     var notaPorBorrar by remember { mutableStateOf<NotaEntity?>(null) }
 
-    // Ej. 8: parámetros de búsqueda. Son estado de UI (rememberSaveable), la base no sabe de ellos.
-    var busqueda by rememberSaveable { mutableStateOf("") }
-    var soloImportantes by rememberSaveable { mutableStateOf(false) }
-    var ascendente by rememberSaveable { mutableStateOf(false) }
+    // Estado que viene del ViewModel (StateFlow -> State de Compose, atado al ciclo de vida).
+    val notas by viewModel.notas.collectAsStateWithLifecycle()
+    val filtros by viewModel.filtros.collectAsStateWithLifecycle()
+    val total by viewModel.total.collectAsStateWithLifecycle()
+    val totalImportantes by viewModel.totalImportantes.collectAsStateWithLifecycle()
+    val guardando by viewModel.guardando.collectAsStateWithLifecycle()
 
-    // Ej. 6 + 8: la lista viene de un Flow. Cuando cambia cualquiera de los 3 parámetros, remember(...) crea
-    // el Flow de la consulta nueva y collectAsStateWithLifecycle pasa a recolectar ese.
-    val notas by remember(dao, busqueda, soloImportantes, ascendente) {
-        dao.filtrar(busqueda.trim(), soloImportantes, ascendente)
-    }.collectAsStateWithLifecycle(initialValue = emptyList())
-
-    // Contadores: salen de COUNT(*) en SQL, no los mantengo a mano.
-    val total by remember(dao) { dao.observarCantidad() }.collectAsStateWithLifecycle(initialValue = 0)
-    val totalImportantes by remember(dao) { dao.observarCantidadImportantes() }.collectAsStateWithLifecycle(initialValue = 0)
+    // Eventos de una sola vez: mensajes, limpiar formulario, snackbar de deshacer.
+    LaunchedEffect(viewModel) {
+        viewModel.eventos.collect { evento ->
+            when (evento) {
+                is EventoUi.Mensaje -> snackbarHostState.showSnackbar(evento.texto)
+                EventoUi.NotaGuardada -> {
+                    titulo = ""
+                    contenido = ""
+                    importante = false
+                }
+                is EventoUi.NotaBorrada -> {
+                    val resultado = snackbarHostState.showSnackbar(
+                        message = "\"${evento.titulo}\" borrada",
+                        actionLabel = "Deshacer"
+                    )
+                    if (resultado == SnackbarResult.ActionPerformed) viewModel.deshacerBorrado()
+                }
+            }
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Ejercicio 8 - Búsqueda y filtros", style = MaterialTheme.typography.titleLarge)
+            Text("Ejercicio 9 - Repository + ViewModel", style = MaterialTheme.typography.titleLarge)
 
             OutlinedTextField(
                 value = titulo,
@@ -256,65 +240,43 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
                 Checkbox(checked = importante, onCheckedChange = { importante = it })
                 Text("Importante")
             }
-
             Button(
-                enabled = !guardando, // evita que dos toques rápidos disparen dos inserts
-                onClick = {
-                    guardando = true
-                    scope.launch {
-                        val id = guardarNota(dao, titulo, contenido, importante)
-                        if (id == null) {
-                            mensaje = "El título no puede estar vacío"
-                        } else {
-                            mensaje = "Nota guardada (id $id)"
-                            titulo = ""
-                            contenido = ""
-                            importante = false
-                        }
-                        guardando = false
-                    }
-                }
+                enabled = !guardando,
+                onClick = { viewModel.guardarNota(titulo, contenido, importante) }
             ) { Text("Guardar") }
-
-            mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
             HorizontalDivider()
             OutlinedTextField(
-                value = busqueda,
-                onValueChange = { busqueda = it },
+                value = filtros.texto,
+                onValueChange = viewModel::cambiarBusqueda,
                 label = { Text("Buscar por título") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(
-                    selected = soloImportantes,
-                    onClick = { soloImportantes = !soloImportantes },
+                    selected = filtros.soloImportantes,
+                    onClick = viewModel::alternarSoloImportantes,
                     label = { Text("Solo importantes") }
                 )
-                OutlinedButton(onClick = { ascendente = !ascendente }) {
-                    Text(if (ascendente) "Más viejas primero" else "Más nuevas primero")
+                OutlinedButton(onClick = viewModel::alternarOrden) {
+                    Text(if (filtros.ascendente) "Más viejas primero" else "Más nuevas primero")
                 }
             }
             Text(
                 "Total: $total - Importantes: $totalImportantes - Mostrando: ${notas.size}",
                 style = MaterialTheme.typography.titleMedium
             )
+
             if (notas.isEmpty()) {
-                // Dos vacíos distintos: tabla vacía vs. ninguna coincidencia con el filtro.
                 Text(if (total == 0) "Todavía no hay notas" else "Ninguna nota coincide con la búsqueda")
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     items(notas, key = { it.id }) { nota ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Se muestra el id para comprobar que editar no cambia la identidad de la fila.
-                            Text(
-                                "#${nota.id} ${if (nota.importante) "★ " else ""}${nota.titulo} - ${nota.contenido}",
-                                modifier = Modifier.weight(1f)
-                            )
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            // Acción de alto nivel del ViewModel: cambiarImportante (no sabe nada de @Update).
+                            Checkbox(checked = nota.importante, onCheckedChange = { viewModel.cambiarImportante(nota) })
+                            Text("#${nota.id} ${nota.titulo} - ${nota.contenido}", modifier = Modifier.weight(1f))
                             TextButton(onClick = { notaEnEdicion = nota }) { Text("Editar") }
                             TextButton(onClick = { notaPorBorrar = nota }) { Text("Borrar") }
                         }
@@ -322,28 +284,20 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
                 }
             }
         }
-
         SnackbarHost(snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
     }
 
-    // --- Diálogo de edición ---
     notaEnEdicion?.let { nota ->
         DialogEditarNota(
             nota = nota,
             onCancelar = { notaEnEdicion = null },
             onGuardar = { t, c, i ->
-                scope.launch {
-                    if (actualizarNota(dao, nota, t, c, i)) {
-                        notaEnEdicion = null
-                    } else {
-                        snackbarHostState.showSnackbar("No se pudo guardar: título vacío o la nota ya no existe")
-                    }
-                }
+                viewModel.actualizarNota(nota, t, c, i)
+                notaEnEdicion = null
             }
         )
     }
 
-    // --- Confirmación de borrado + deshacer ---
     notaPorBorrar?.let { nota ->
         AlertDialog(
             onDismissRequest = { notaPorBorrar = null },
@@ -351,16 +305,8 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
             text = { Text("\"${nota.titulo}\" se va a eliminar.") },
             confirmButton = {
                 TextButton(onClick = {
+                    viewModel.eliminarNota(nota)
                     notaPorBorrar = null
-                    scope.launch {
-                        dao.eliminar(nota)
-                        // `nota` queda guardada en esta variable: es el dato temporal que permite reinsertar.
-                        val resultado = snackbarHostState.showSnackbar(
-                            message = "Nota borrada",
-                            actionLabel = "Deshacer"
-                        )
-                        if (resultado == SnackbarResult.ActionPerformed) dao.insertar(nota)
-                    }
                 }) { Text("Borrar") }
             },
             dismissButton = { TextButton(onClick = { notaPorBorrar = null }) { Text("Cancelar") } }
@@ -374,7 +320,6 @@ private fun DialogEditarNota(
     onCancelar: () -> Unit,
     onGuardar: (titulo: String, contenido: String, importante: Boolean) -> Unit
 ) {
-    // Los campos arrancan con los valores actuales de la nota que se abrió.
     var titulo by remember(nota.id) { mutableStateOf(nota.titulo) }
     var contenido by remember(nota.id) { mutableStateOf(nota.contenido) }
     var importante by remember(nota.id) { mutableStateOf(nota.importante) }

@@ -3,6 +3,8 @@ package com.example.ejercicioskotlinroom
 import android.app.Application
 import androidx.room.Room
 import com.example.ejercicioskotlinroom.data.AppDatabase
+import com.example.ejercicioskotlinroom.data.NotaRepository
+import com.example.ejercicioskotlinroom.data.NotaRepositoryImpl
 
 /*
  * Application: el objeto que vive tanto como el proceso. Acá se construye la ÚNICA instancia de la base
@@ -17,4 +19,7 @@ class NotasApp : Application() {
             "notas.db" // nombre del archivo SQLite; el que se ve en Database Inspector
         ).build()
     }
+
+    // Ej. 9: el repositorio recibe el DAO por constructor; no crea la base, usa la única que hay.
+    val repositorio: NotaRepository by lazy { NotaRepositoryImpl(database.notaDao()) }
 }
