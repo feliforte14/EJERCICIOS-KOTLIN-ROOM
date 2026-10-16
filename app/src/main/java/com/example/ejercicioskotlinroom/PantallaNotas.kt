@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,13 @@ import com.example.ejercicioskotlinroom.data.NotaEntity
 import com.example.ejercicioskotlinroom.data.Prioridad
 
 /*
+ * EJERCICIO 13 - Transacciones
+ *
+ * En el panel de categorías, cada categoría tiene "Fusionar en...": mueve sus notas a otra categoría y la borra,
+ * como una sola operación atómica (CategoriaDao.fusionar). La explicación del estado intermedio que se evita y las
+ * respuestas a las preguntas están en CategoriaDao.kt; la prueba con fallo forzado en CategoriaDaoTest.
+ *
+ * ---- (Texto del ejercicio 12, sigue valiendo) ----
  * EJERCICIO 12 - Prioridad (enum + TypeConverter)
  *
  * El formulario tiene un selector de prioridad (BAJA / MEDIA / ALTA) y la lista la muestra. En la base se guarda el
@@ -254,7 +263,7 @@ fun PantallaNotas(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Ejercicio 12 - Prioridad (TypeConverter)", style = MaterialTheme.typography.titleLarge)
+            Text("Ejercicio 13 - Transacciones", style = MaterialTheme.typography.titleLarge)
 
             OutlinedTextField(
                 value = titulo,
@@ -311,7 +320,8 @@ fun PantallaNotas(
                     viewModel.agregarCategoria(nuevaCategoria)
                     nuevaCategoria = ""
                 },
-                onEliminar = viewModel::eliminarCategoria
+                onEliminar = viewModel::eliminarCategoria,
+                onFusionar = viewModel::fusionarCategorias
             )
 
             HorizontalDivider()
@@ -423,7 +433,8 @@ private fun PanelCategorias(
     nuevaCategoria: String,
     onNuevaCategoriaChange: (String) -> Unit,
     onAgregar: () -> Unit,
-    onEliminar: (com.example.ejercicioskotlinroom.data.CategoriaEntity) -> Unit
+    onEliminar: (com.example.ejercicioskotlinroom.data.CategoriaEntity) -> Unit,
+    onFusionar: (origen: com.example.ejercicioskotlinroom.data.CategoriaEntity, destino: com.example.ejercicioskotlinroom.data.CategoriaEntity) -> Unit
 ) {
     Text("Categorías", style = MaterialTheme.typography.titleMedium)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -445,6 +456,25 @@ private fun PanelCategorias(
                 "${cn.categoria.nombre} (${cn.notas.size}): " + cn.notas.joinToString { it.titulo }.ifEmpty { "sin notas" },
                 modifier = Modifier.weight(1f)
             )
+            // Ej. 13: menú con las OTRAS categorías como destino de la fusión.
+            var menuAbierto by remember(cn.categoria.id) { mutableStateOf(false) }
+            val otras = categoriasConNotas.map { it.categoria }.filter { it.id != cn.categoria.id }
+            if (otras.isNotEmpty()) {
+                Box {
+                    TextButton(onClick = { menuAbierto = true }) { Text("Fusionar en…") }
+                    DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
+                        otras.forEach { destino ->
+                            DropdownMenuItem(
+                                text = { Text(destino.nombre) },
+                                onClick = {
+                                    menuAbierto = false
+                                    onFusionar(cn.categoria, destino)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
             // Borrar la categoría NO borra las notas: quedan sin categoría (SET_NULL).
             TextButton(onClick = { onEliminar(cn.categoria) }) { Text("Borrar") }
         }

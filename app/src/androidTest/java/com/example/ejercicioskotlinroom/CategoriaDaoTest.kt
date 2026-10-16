@@ -74,4 +74,51 @@ class CategoriaDaoTest {
         assertTrue(db.categoriaDao().insertar(CategoriaEntity(nombre = "Trabajo")) > 0)
         assertEquals(-1L, db.categoriaDao().insertar(CategoriaEntity(nombre = "Trabajo")))
     }
+
+    // ---- Ejercicio 13: transacciones ----
+
+    private suspend fun prepararDosCategoriasConNotas(): Triple<CategoriaEntity, Int, Int> {
+        val origen = CategoriaEntity(nombre = "Origen")
+        val origenId = db.categoriaDao().insertar(origen).toInt()
+        val destinoId = db.categoriaDao().insertar(CategoriaEntity(nombre = "Destino")).toInt()
+        db.notaDao().insertar(NotaEntity(titulo = "N1", contenido = "", creadaEn = 1, categoriaId = origenId))
+        db.notaDao().insertar(NotaEntity(titulo = "N2", contenido = "", creadaEn = 2, categoriaId = origenId))
+        return Triple(origen.copy(id = origenId), origenId, destinoId)
+    }
+
+    @Test
+    fun fusionar_muevelasNotasYBorraElOrigen() = runBlocking {
+        val (origen, origenId, destinoId) = prepararDosCategoriasConNotas()
+        db.categoriaDao().fusionar(origen, destinoId)
+        assertNull(db.categoriaDao().obtenerCategoriaConNotas(origenId))
+        assertEquals(2, db.categoriaDao().obtenerCategoriaConNotas(destinoId)!!.notas.size)
+    }
+
+    @Test
+    fun fusionConFalloForzado_conTransaccion_haceRollback() = runBlocking {
+        val (origen, origenId, destinoId) = prepararDosCategoriasConNotas()
+        try {
+            db.categoriaDao().fusionar(origen, destinoId, fallarEntrePasos = true)
+            fail("Debería haber fallado")
+        } catch (e: IllegalStateException) {
+            // esperado
+        }
+        // Rollback: todo como antes. Las notas siguen en el origen, el destino sigue vacío y el origen existe.
+        assertEquals(2, db.categoriaDao().obtenerCategoriaConNotas(origenId)!!.notas.size)
+        assertEquals(0, db.categoriaDao().obtenerCategoriaConNotas(destinoId)!!.notas.size)
+    }
+
+    @Test
+    fun fusionConFalloForzado_sinTransaccion_dejaEstadoIntermedio() = runBlocking {
+        val (origen, origenId, destinoId) = prepararDosCategoriasConNotas()
+        try {
+            db.categoriaDao().fusionarSinTransaccion(origen, destinoId, fallarEntrePasos = true)
+            fail("Debería haber fallado")
+        } catch (e: IllegalStateException) {
+            // esperado
+        }
+        // Estado inconsistente: las notas YA se movieron pero la categoría origen sigue existiendo, vacía.
+        assertEquals(0, db.categoriaDao().obtenerCategoriaConNotas(origenId)!!.notas.size)
+        assertEquals(2, db.categoriaDao().obtenerCategoriaConNotas(destinoId)!!.notas.size)
+    }
 }

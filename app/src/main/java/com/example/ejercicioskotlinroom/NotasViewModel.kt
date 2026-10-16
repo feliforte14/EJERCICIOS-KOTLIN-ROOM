@@ -151,6 +151,20 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
         viewModelScope.launch { repositorio.eliminarCategoria(categoria) }
     }
 
+    // Ej. 13: fusionar = mover notas + eliminar categoría vacía (una transacción en el DAO).
+    fun fusionarCategorias(origen: CategoriaEntity, destino: CategoriaEntity) {
+        if (origen.id == destino.id) return
+        viewModelScope.launch {
+            try {
+                repositorio.fusionarCategorias(origen, destino.id)
+                _eventos.send(EventoUi.Mensaje("\"${origen.nombre}\" se fusionó en \"${destino.nombre}\""))
+            } catch (e: Exception) {
+                // Si algo falla, la transacción hizo rollback: no hay estado a medias que reparar.
+                _eventos.send(EventoUi.Mensaje("No se pudo fusionar; no se cambió nada"))
+            }
+        }
+    }
+
     fun cambiarImportante(nota: NotaEntity) {
         viewModelScope.launch { repositorio.actualizar(nota.copy(importante = !nota.importante)) }
     }

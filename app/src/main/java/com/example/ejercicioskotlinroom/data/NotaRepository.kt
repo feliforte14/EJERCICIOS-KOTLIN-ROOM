@@ -56,6 +56,9 @@ interface NotaRepository {
     fun observarCategoriasConNotas(): Flow<List<CategoriaConNotas>>
     suspend fun agregarCategoria(nombre: String): Long
     suspend fun eliminarCategoria(categoria: CategoriaEntity)
+
+    // Ej. 13: mueve las notas de `origen` a `destinoId` y elimina `origen`, todo en una transacción.
+    suspend fun fusionarCategorias(origen: CategoriaEntity, destinoId: Int)
 }
 
 // Implementación con Room. Recibe el DAO por constructor (no crea la base: esa es única y vive en NotasApp).
@@ -112,5 +115,10 @@ class NotaRepositoryImpl(
 
     override suspend fun eliminarCategoria(categoria: CategoriaEntity) {
         categoriaDao.eliminar(categoria) // sus notas quedan con categoriaId = NULL (SET_NULL)
+    }
+
+    // Usa la versión transaccional del DAO: nunca queda "movido pero sin borrar".
+    override suspend fun fusionarCategorias(origen: CategoriaEntity, destinoId: Int) {
+        categoriaDao.fusionar(origen, destinoId)
     }
 }
