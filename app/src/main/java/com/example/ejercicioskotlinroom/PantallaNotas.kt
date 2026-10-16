@@ -37,6 +37,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ejercicioskotlinroom.data.NotaEntity
 
 /*
+ * EJERCICIO 10 - Restricciones, índices y conflictos
+ *
+ * Agrego el campo opcional "Código externo" al formulario. Si se repite, el insert se ignora (-1) y la pantalla
+ * avisa en vez de guardar en silencio o romper. El detalle de índices y estrategias está en NotaEntity.kt y NotaDao.kt.
+ *
+ * ---- (Texto del ejercicio 9, sigue valiendo) ----
  * EJERCICIO 9 - Poner orden: Repository, ViewModel y Room
  *
  * La pantalla ahora se parece a la del ej. 8 (mismo comportamiento) pero ya NO conoce el DAO:
@@ -184,6 +190,7 @@ fun PantallaNotas(
     var titulo by rememberSaveable { mutableStateOf("") }
     var contenido by rememberSaveable { mutableStateOf("") }
     var importante by rememberSaveable { mutableStateOf(false) }
+    var codigoExterno by rememberSaveable { mutableStateOf("") }
 
     var notaEnEdicion by remember { mutableStateOf<NotaEntity?>(null) }
     var notaPorBorrar by remember { mutableStateOf<NotaEntity?>(null) }
@@ -204,6 +211,7 @@ fun PantallaNotas(
                     titulo = ""
                     contenido = ""
                     importante = false
+                    codigoExterno = ""
                 }
                 is EventoUi.NotaBorrada -> {
                     val resultado = snackbarHostState.showSnackbar(
@@ -221,7 +229,7 @@ fun PantallaNotas(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Ejercicio 9 - Repository + ViewModel", style = MaterialTheme.typography.titleLarge)
+            Text("Ejercicio 10 - Restricciones e índices", style = MaterialTheme.typography.titleLarge)
 
             OutlinedTextField(
                 value = titulo,
@@ -236,13 +244,20 @@ fun PantallaNotas(
                 label = { Text("Contenido") },
                 modifier = Modifier.fillMaxWidth()
             )
+            OutlinedTextField(
+                value = codigoExterno,
+                onValueChange = { codigoExterno = it },
+                label = { Text("Código externo (opcional, único)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = importante, onCheckedChange = { importante = it })
                 Text("Importante")
             }
             Button(
                 enabled = !guardando,
-                onClick = { viewModel.guardarNota(titulo, contenido, importante) }
+                onClick = { viewModel.guardarNota(titulo, contenido, importante, codigoExterno) }
             ) { Text("Guardar") }
 
             HorizontalDivider()
@@ -276,7 +291,11 @@ fun PantallaNotas(
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             // Acción de alto nivel del ViewModel: cambiarImportante (no sabe nada de @Update).
                             Checkbox(checked = nota.importante, onCheckedChange = { viewModel.cambiarImportante(nota) })
-                            Text("#${nota.id} ${nota.titulo} - ${nota.contenido}", modifier = Modifier.weight(1f))
+                            Text(
+                                "#${nota.id} ${nota.titulo} - ${nota.contenido}" +
+                                    (nota.codigoExterno?.let { " [$it]" } ?: ""),
+                                modifier = Modifier.weight(1f)
+                            )
                             TextButton(onClick = { notaEnEdicion = nota }) { Text("Editar") }
                             TextButton(onClick = { notaPorBorrar = nota }) { Text("Borrar") }
                         }

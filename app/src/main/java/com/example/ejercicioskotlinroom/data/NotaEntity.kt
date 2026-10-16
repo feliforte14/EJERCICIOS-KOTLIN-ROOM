@@ -1,6 +1,7 @@
 package com.example.ejercicioskotlinroom.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /*
@@ -56,7 +57,54 @@ import androidx.room.PrimaryKey
  *    coincide y hace falta subir la versión y escribir una migración (ej. 14).
  *    Por eso conviene pensar bien los nombres de entrada, o fijarlos con @ColumnInfo(name = ...).
  */
-@Entity(tableName = "notas")
+/*
+ * EJERCICIO 10 - Restricciones, índices y conflictos
+ *
+ * Cada nota puede tener un `codigoExterno` (opcional) que no debería repetirse -> índice ÚNICO.
+ *   - Dos notas con el mismo codigoExterno: la segunda viola la restricción UNIQUE y SQLite la rechaza.
+ *   - SQLite permite VARIAS filas con codigoExterno NULL (NULL no se considera igual a otro NULL), así que
+ *     "sin código" no choca. Ojo: un String vacío "" SÍ es un valor y chocaría; por eso la capa de datos
+ *     convierte el texto en blanco a null antes de guardar.
+ *
+ * Índice NO único sobre creadaEn: todas las consultas de la pantalla hacen ORDER BY creadaEn.
+ * Con el índice, SQLite puede recorrer las filas ya ordenadas en vez de ordenarlas cada vez.
+ * Elegí creadaEn y no `importante` porque importante solo tiene dos valores (0/1): un índice ahí casi no
+ * discrimina. Tampoco titulo: la búsqueda es LIKE '%texto%' con comodín adelante, que no usa un índice común.
+ * Costo: el índice ocupa espacio y cada insert/update tiene que mantenerlo.
+ *
+ * Estrategia de conflicto elegida para insertar: IGNORE (ver NotaDao.insertar).
+ *   ABORT   (default): cancela y lanza SQLiteConstraintException. Sirve si un duplicado es un bug que
+ *           tiene que explotar fuerte; obliga a capturar la excepción.
+ *   IGNORE: no inserta y devuelve -1 como rowId. Es la que uso: un código repetido es un error de usuario
+ *           esperable, no una excepción, y el Repository/ViewModel lo traducen a un mensaje.
+ *   REPLACE: borra la fila vieja y mete la nueva. Peligrosa por comodidad: la nota anterior se pierde en
+ *           silencio, cambia su id y, con foreign keys en CASCADE, arrastraría filas hijas.
+ *
+ * PREGUNTAS
+ * 1) ¿Un índice único es lo mismo que una clave primaria?
+ *    No. La PK identifica la fila, no puede ser NULL y hay una sola por tabla. Un índice único solo impide
+ *    repetidos en esa(s) columna(s); puede haber varios por tabla y admite NULL. Los dos usan un índice por dentro.
+ * 2) ¿Qué problema puede traer REPLACE si se usa por comodidad?
+ *    Pierde datos sin avisar (la fila anterior desaparece), cambia el id de la nota y puede disparar borrados
+ *    en cascada de las tablas relacionadas. Un "guardar" termina pareciendo un "pisar".
+ * 3) ¿Los índices mejoran todo gratis?
+ *    No. Aceleran lecturas que filtran u ordenan por esa columna, pero ocupan espacio y hacen más lentas las
+ *    escrituras. Un índice que ninguna consulta usa es costo puro.
+ * 4) ¿Cómo comprobaría que una restricción realmente se cumple?
+ *    Con una prueba: insertar dos filas con el mismo valor y verificar que la segunda no queda (ver
+ *    NotaDaoTest.codigoExternoRepetido...). También intentando lo mismo en Database Inspector, que debe rechazarlo.
+ *
+ * Nota de desarrollo: el esquema cambió (columna nueva + índices) pero la versión sigue en 1 porque la app
+ * todavía no tiene usuarios. En el equipo de pruebas hay que borrar los datos de la app (adb shell pm clear ...)
+ * para que Room recree la tabla. Desde el ej. 14 los cambios de esquema se hacen con migraciones.
+ */
+@Entity(
+    tableName = "notas",
+    indices = [
+        Index(value = ["codigoExterno"], unique = true),
+        Index(value = ["creadaEn"])
+    ]
+)
 data class NotaEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
@@ -65,5 +113,7 @@ data class NotaEntity(
     val importante: Boolean = false,
     val creadaEn: Long,
     // Columna propia del ejercicio (la consigna pedía elegir una).
-    val colorEtiqueta: String = "NINGUNO"
+    val colorEtiqueta: String = "NINGUNO",
+    // Ej. 10: identificador opcional que viene de afuera. null = sin código (no choca con otras notas sin código).
+    val codigoExterno: String? = null
 )

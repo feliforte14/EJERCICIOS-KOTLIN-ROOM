@@ -3,6 +3,7 @@ package com.example.ejercicioskotlinroom.data
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
@@ -47,8 +48,17 @@ import kotlinx.coroutines.flow.Flow
 interface NotaDao {
 
     // Devuelve el id (rowId) con el que quedó la fila.
-    @Insert
+    // Ej. 10: IGNORE. Si choca con una restricción (codigoExterno repetido) no inserta y devuelve -1,
+    // sin lanzar excepción. Ver los motivos en NotaEntity.
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertar(nota: NotaEntity): Long
+
+    // Las otras dos estrategias existen SOLO para compararlas en las pruebas (NotaDaoTest); la app no las usa.
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertarAbortando(nota: NotaEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarReemplazando(nota: NotaEntity): Long
 
     // Lectura puntual ("una vez"): trae la lista actual y listo. Más adelante la reemplazo por un Flow (ej. 6).
     @Query("SELECT * FROM notas ORDER BY creadaEn DESC")

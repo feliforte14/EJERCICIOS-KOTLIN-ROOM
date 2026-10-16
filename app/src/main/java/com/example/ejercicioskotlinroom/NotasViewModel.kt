@@ -78,7 +78,7 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
     fun alternarOrden() = _filtros.update { it.copy(ascendente = !it.ascendente) }
 
     // Regla de validación (pregunta 3 de la guía): vive acá, no en la UI ni en el Repository.
-    fun guardarNota(titulo: String, contenido: String, importante: Boolean) {
+    fun guardarNota(titulo: String, contenido: String, importante: Boolean, codigoExterno: String = "") {
         if (_guardando.value) return // segundo toque mientras guarda: se ignora
         val tituloLimpio = titulo.trim()
         if (tituloLimpio.isEmpty()) {
@@ -88,10 +88,15 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
         _guardando.value = true
         viewModelScope.launch {
             try {
-                val id = repositorio.agregar(tituloLimpio, contenido.trim(), importante)
-                // Primero limpiar el formulario y después el mensaje: el snackbar suspende al colector hasta que se cierra.
-                _eventos.send(EventoUi.NotaGuardada)
-                _eventos.send(EventoUi.Mensaje("Nota guardada (id $id)"))
+                val id = repositorio.agregar(tituloLimpio, contenido.trim(), importante, codigoExterno)
+                if (id == -1L) {
+                    // Ej. 10: IGNORE devolvió -1 -> el código ya existe. No se limpia el formulario para que se pueda corregir.
+                    _eventos.send(EventoUi.Mensaje("Ya existe una nota con ese código externo"))
+                } else {
+                    // Primero limpiar el formulario y después el mensaje: el snackbar suspende al colector hasta que se cierra.
+                    _eventos.send(EventoUi.NotaGuardada)
+                    _eventos.send(EventoUi.Mensaje("Nota guardada (id $id)"))
+                }
             } finally {
                 _guardando.value = false
             }

@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "a334d7eda29476fc5ac09c34942e3fc5",
+    "identityHash": "136b99ad735a5f900046a7488ea963e6",
     "entities": [
       {
         "tableName": "notas",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `titulo` TEXT NOT NULL, `contenido` TEXT NOT NULL, `importante` INTEGER NOT NULL, `creadaEn` INTEGER NOT NULL, `colorEtiqueta` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `titulo` TEXT NOT NULL, `contenido` TEXT NOT NULL, `importante` INTEGER NOT NULL, `creadaEn` INTEGER NOT NULL, `colorEtiqueta` TEXT NOT NULL, `codigoExterno` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -43,6 +43,11 @@
             "columnName": "colorEtiqueta",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "codigoExterno",
+            "columnName": "codigoExterno",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -50,12 +55,32 @@
           "columnNames": [
             "id"
           ]
-        }
+        },
+        "indices": [
+          {
+            "name": "index_notas_codigoExterno",
+            "unique": true,
+            "columnNames": [
+              "codigoExterno"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_notas_codigoExterno` ON `${TABLE_NAME}` (`codigoExterno`)"
+          },
+          {
+            "name": "index_notas_creadaEn",
+            "unique": false,
+            "columnNames": [
+              "creadaEn"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notas_creadaEn` ON `${TABLE_NAME}` (`creadaEn`)"
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a334d7eda29476fc5ac09c34942e3fc5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '136b99ad735a5f900046a7488ea963e6')"
     ]
   }
 }

@@ -39,7 +39,7 @@ interface NotaRepository {
     fun observarCantidad(): Flow<Int>
     fun observarCantidadImportantes(): Flow<Int>
 
-    suspend fun agregar(titulo: String, contenido: String, importante: Boolean): Long
+    suspend fun agregar(titulo: String, contenido: String, importante: Boolean, codigoExterno: String? = null): Long
     suspend fun actualizar(nota: NotaEntity): Boolean
     suspend fun eliminar(nota: NotaEntity)
     suspend fun restaurar(nota: NotaEntity)
@@ -54,12 +54,15 @@ class NotaRepositoryImpl(private val dao: NotaDao) : NotaRepository {
     override fun observarCantidad() = dao.observarCantidad()
     override fun observarCantidadImportantes() = dao.observarCantidadImportantes()
 
-    override suspend fun agregar(titulo: String, contenido: String, importante: Boolean): Long =
+    // Devuelve el id nuevo, o -1 si el codigoExterno ya existe (IGNORE no inserta).
+    override suspend fun agregar(titulo: String, contenido: String, importante: Boolean, codigoExterno: String?): Long =
         dao.insertar(
             NotaEntity(
                 titulo = titulo,
                 contenido = contenido,
                 importante = importante,
+                // "" no es "sin código": chocaría con otro "". Lo normalizo a null.
+                codigoExterno = codigoExterno?.trim()?.ifEmpty { null },
                 creadaEn = System.currentTimeMillis() // el momento del guardado lo fija esta capa
             )
         )

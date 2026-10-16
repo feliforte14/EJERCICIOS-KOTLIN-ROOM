@@ -13,6 +13,9 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
+import android.database.sqlite.SQLiteConstraintException
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -80,5 +83,44 @@ class NotaDaoTest {
         // contadores
         assertEquals(3, dao.observarCantidad().first())
         assertEquals(1, dao.observarCantidadImportantes().first())
+    }
+
+    // ---- Ejercicio 10: la restricción UNIQUE realmente se cumple ----
+
+    @Test
+    fun codigoExternoRepetido_conIgnore_devuelveMenosUnoYNoInserta() = runBlocking {
+        val primera = dao.insertar(NotaEntity(titulo = "A", contenido = "", creadaEn = 1, codigoExterno = "X-1"))
+        val segunda = dao.insertar(NotaEntity(titulo = "B", contenido = "", creadaEn = 2, codigoExterno = "X-1"))
+        assertTrue(primera > 0)
+        assertEquals(-1L, segunda)
+        assertEquals(1, dao.contarNotas())
+    }
+
+    @Test
+    fun codigoExternoRepetido_conAbort_lanzaExcepcion() = runBlocking {
+        dao.insertarAbortando(NotaEntity(titulo = "A", contenido = "", creadaEn = 1, codigoExterno = "X-1"))
+        try {
+            dao.insertarAbortando(NotaEntity(titulo = "B", contenido = "", creadaEn = 2, codigoExterno = "X-1"))
+            fail("Debería violar el índice único")
+        } catch (e: SQLiteConstraintException) {
+            // esperado
+        }
+        assertEquals(1, dao.contarNotas())
+    }
+
+    @Test
+    fun codigoExternoRepetido_conReplace_pisaLaFilaVieja() = runBlocking {
+        val idViejo = dao.insertarReemplazando(NotaEntity(titulo = "Vieja", contenido = "", creadaEn = 1, codigoExterno = "X-1"))
+        val idNuevo = dao.insertarReemplazando(NotaEntity(titulo = "Nueva", contenido = "", creadaEn = 2, codigoExterno = "X-1"))
+        assertEquals(1, dao.contarNotas())               // sigue habiendo una sola
+        assertTrue(idNuevo != idViejo)                   // pero con otro id: la vieja desapareció
+        assertEquals("Nueva", dao.obtenerTodasUnaVez().single().titulo)
+    }
+
+    @Test
+    fun variasNotasSinCodigoNoChocan() = runBlocking {
+        dao.insertar(NotaEntity(titulo = "A", contenido = "", creadaEn = 1))
+        dao.insertar(NotaEntity(titulo = "B", contenido = "", creadaEn = 2))
+        assertEquals(2, dao.contarNotas())               // NULL no es igual a NULL para UNIQUE
     }
 }
