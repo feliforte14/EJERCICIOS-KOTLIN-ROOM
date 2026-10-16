@@ -3,6 +3,7 @@ package com.example.ejercicioskotlinroom
 import android.app.Application
 import androidx.room.Room
 import com.example.ejercicioskotlinroom.data.AppDatabase
+import com.example.ejercicioskotlinroom.data.MIGRATION_1_2
 import com.example.ejercicioskotlinroom.data.NotaRepository
 import com.example.ejercicioskotlinroom.data.NotaRepositoryImpl
 
@@ -17,7 +18,10 @@ class NotasApp : Application() {
             applicationContext,
             AppDatabase::class.java,
             "notas.db" // nombre del archivo SQLite; el que se ve en Database Inspector
-        ).build()
+        )
+            // Ej. 14: camino de migración registrado. NO uso fallbackToDestructiveMigration: borraría las notas del usuario.
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     // Ej. 9: el repositorio recibe el DAO por constructor; no crea la base, usa la única que hay.

@@ -110,11 +110,12 @@ interface NotaDao {
         SELECT * FROM notas
         WHERE titulo LIKE '%' || :texto || '%'
           AND (:soloImportantes = 0 OR importante = 1)
+          AND archivada = :archivadas
         ORDER BY
           CASE WHEN :ascendente = 1 THEN creadaEn END ASC,
           CASE WHEN :ascendente = 0 THEN creadaEn END DESC
     """)
-    fun filtrar(texto: String, soloImportantes: Boolean, ascendente: Boolean): Flow<List<NotaEntity>>
+    fun filtrar(texto: String, soloImportantes: Boolean, ascendente: Boolean, archivadas: Boolean = false): Flow<List<NotaEntity>>
 
     // Pensada para pruebas controladas: deja la tabla vacía.
     @Query("DELETE FROM notas")

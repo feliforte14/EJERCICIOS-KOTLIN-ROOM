@@ -57,6 +57,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     // Room: runtime + ktx (suspend/Flow) y el compilador con KSP (genera la implementación del DAO y la base)
+    // room-testing (MigrationTestHelper) lee los JSON de esquema con kotlinx.serialization 1.8+, pero la resolución
+    // consistente de Gradle lo bajaba a 1.7.3 por las dependencias de lifecycle. Subirlo acá en la app lo arregla
+    // (sin esto el test de migración falla con AbstractMethodError).
+    implementation(libs.kotlinx.serialization.core)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)

@@ -43,6 +43,12 @@ import com.example.ejercicioskotlinroom.data.NotaEntity
 import com.example.ejercicioskotlinroom.data.Prioridad
 
 /*
+ * EJERCICIO 14 - Migración 1 -> 2 (archivada)
+ *
+ * Cada nota puede archivarse y un chip "Archivadas" cambia entre ver las activas y las archivadas.
+ * La migración (versión 1 a 2, conservando datos) y sus respuestas están en data/Migrations.kt.
+ *
+ * ---- (Texto del ejercicio 13, sigue valiendo) ----
  * EJERCICIO 13 - Transacciones
  *
  * En el panel de categorías, cada categoría tiene "Fusionar en...": mueve sus notas a otra categoría y la borra,
@@ -263,7 +269,7 @@ fun PantallaNotas(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Ejercicio 13 - Transacciones", style = MaterialTheme.typography.titleLarge)
+            Text("Ejercicio 14 - Migraciones", style = MaterialTheme.typography.titleLarge)
 
             OutlinedTextField(
                 value = titulo,
@@ -338,6 +344,11 @@ fun PantallaNotas(
                     onClick = viewModel::alternarSoloImportantes,
                     label = { Text("Solo importantes") }
                 )
+                FilterChip(
+                    selected = filtros.verArchivadas,
+                    onClick = viewModel::alternarArchivadas,
+                    label = { Text("Archivadas") }
+                )
                 OutlinedButton(onClick = viewModel::alternarOrden) {
                     Text(if (filtros.ascendente) "Más viejas primero" else "Más nuevas primero")
                 }
@@ -361,6 +372,9 @@ fun PantallaNotas(
                                     (categorias.firstOrNull { it.id == nota.categoriaId }?.let { " (${it.nombre})" } ?: ""),
                                 modifier = Modifier.weight(1f)
                             )
+                            TextButton(onClick = { viewModel.cambiarArchivada(nota) }) {
+                                Text(if (nota.archivada) "Desarchivar" else "Archivar")
+                            }
                             TextButton(onClick = { notaEnEdicion = nota }) { Text("Editar") }
                             TextButton(onClick = { notaPorBorrar = nota }) { Text("Borrar") }
                         }

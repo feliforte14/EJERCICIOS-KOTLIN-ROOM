@@ -35,7 +35,7 @@ import kotlinx.coroutines.flow.Flow
  *    guardar el resultado en Room. ViewModel y UI no se enteran.
  */
 interface NotaRepository {
-    fun observarNotas(texto: String, soloImportantes: Boolean, ascendente: Boolean): Flow<List<NotaEntity>>
+    fun observarNotas(texto: String, soloImportantes: Boolean, ascendente: Boolean, archivadas: Boolean): Flow<List<NotaEntity>>
     fun observarCantidad(): Flow<Int>
     fun observarCantidadImportantes(): Flow<Int>
 
@@ -67,8 +67,8 @@ class NotaRepositoryImpl(
     private val categoriaDao: CategoriaDao
 ) : NotaRepository {
 
-    override fun observarNotas(texto: String, soloImportantes: Boolean, ascendente: Boolean) =
-        dao.filtrar(texto, soloImportantes, ascendente)
+    override fun observarNotas(texto: String, soloImportantes: Boolean, ascendente: Boolean, archivadas: Boolean) =
+        dao.filtrar(texto, soloImportantes, ascendente, archivadas)
 
     override fun observarCantidad() = dao.observarCantidad()
     override fun observarCantidadImportantes() = dao.observarCantidadImportantes()

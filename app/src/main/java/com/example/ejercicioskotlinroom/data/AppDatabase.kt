@@ -41,7 +41,7 @@ import androidx.room.TypeConverters
  */
 @Database(
     entities = [NotaEntity::class, CategoriaEntity::class],
-    version = 1,
+    version = 2, // Ej. 14: 1 -> 2 agrega notas.archivada (ver MIGRATION_1_2 en Migrations.kt)
     exportSchema = true
 )
 // Ej. 12: registra los conversores para toda la base (entidades y DAO).

@@ -38,7 +38,8 @@ import kotlinx.coroutines.launch
 data class Filtros(
     val texto: String = "",
     val soloImportantes: Boolean = false,
-    val ascendente: Boolean = false
+    val ascendente: Boolean = false,
+    val verArchivadas: Boolean = false // Ej. 14
 )
 
 // Cosas que pasan una sola vez y la UI tiene que reaccionar (no son "estado" que se queda en pantalla).
@@ -58,7 +59,7 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
     // stateIn la convierte en StateFlow: tiene valor inicial y la comparten todos los que la miran.
     // WhileSubscribed(5000): si la UI deja de mirar (ej. rotación) la consulta sigue 5 s y no se reinicia.
     val notas: StateFlow<List<NotaEntity>> = _filtros
-        .flatMapLatest { f -> repositorio.observarNotas(f.texto.trim(), f.soloImportantes, f.ascendente) }
+        .flatMapLatest { f -> repositorio.observarNotas(f.texto.trim(), f.soloImportantes, f.ascendente, f.verArchivadas) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val total: StateFlow<Int> = repositorio.observarCantidad()
@@ -84,6 +85,7 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
 
     fun cambiarBusqueda(texto: String) = _filtros.update { it.copy(texto = texto) }
     fun alternarSoloImportantes() = _filtros.update { it.copy(soloImportantes = !it.soloImportantes) }
+    fun alternarArchivadas() = _filtros.update { it.copy(verArchivadas = !it.verArchivadas) }
     fun alternarOrden() = _filtros.update { it.copy(ascendente = !it.ascendente) }
 
     // Regla de validación (pregunta 3 de la guía): vive acá, no en la UI ni en el Repository.
@@ -163,6 +165,11 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
                 _eventos.send(EventoUi.Mensaje("No se pudo fusionar; no se cambió nada"))
             }
         }
+    }
+
+    // Ej. 14: archivar/desarchivar es un update más; la nota sale o vuelve a la lista según el filtro.
+    fun cambiarArchivada(nota: NotaEntity) {
+        viewModelScope.launch { repositorio.actualizar(nota.copy(archivada = !nota.archivada)) }
     }
 
     fun cambiarImportante(nota: NotaEntity) {

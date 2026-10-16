@@ -1,5 +1,6 @@
 package com.example.ejercicioskotlinroom.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -59,6 +60,10 @@ import androidx.room.PrimaryKey
  *    Por eso conviene pensar bien los nombres de entrada, o fijarlos con @ColumnInfo(name = ...).
  */
 /*
+ * EJERCICIO 14 - Se agrega `archivada: Boolean` (versión 2 del esquema). defaultValue = "0" refleja el
+ * DEFAULT 0 de la migración. Toda la explicación está en Migrations.kt.
+ *
+ * ---- (Texto del ejercicio 12, sigue valiendo) ----
  * EJERCICIO 12 - Se agrega `prioridad: Prioridad` (enum). Room lo guarda como TEXT gracias a Converters.kt
  * (ahí están las respuestas y el detalle de qué se guarda). Columna: prioridad TEXT NOT NULL.
  *
@@ -164,5 +169,8 @@ data class NotaEntity(
     // Ej. 11: clave foránea a categorias.id. null = nota sin categoría.
     val categoriaId: Int? = null,
     // Ej. 12: enum guardado como texto mediante TypeConverter.
-    val prioridad: Prioridad = Prioridad.MEDIA
+    val prioridad: Prioridad = Prioridad.MEDIA,
+    // Ej. 14: columna agregada en la versión 2. Las filas viejas quedan en 0 (no archivadas).
+    @ColumnInfo(defaultValue = "0")
+    val archivada: Boolean = false
 )
