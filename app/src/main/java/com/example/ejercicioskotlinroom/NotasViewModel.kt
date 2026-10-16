@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.ejercicioskotlinroom.data.CategoriaConNotas
+import com.example.ejercicioskotlinroom.data.CategoriaEntity
 import com.example.ejercicioskotlinroom.data.NotaEntity
 import com.example.ejercicioskotlinroom.data.NotaRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -63,6 +65,12 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
     val totalImportantes: StateFlow<Int> = repositorio.observarCantidadImportantes()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
+    // Ej. 11: categorías para los chips del formulario y el panel con sus notas (relación 1:N).
+    val categorias: StateFlow<List<CategoriaEntity>> = repositorio.observarCategorias()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val categoriasConNotas: StateFlow<List<CategoriaConNotas>> = repositorio.observarCategoriasConNotas()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     // El guardado en curso es estado de pantalla: evita el doble toque (ej. 5).
     private val _guardando = MutableStateFlow(false)
     val guardando: StateFlow<Boolean> = _guardando.asStateFlow()
@@ -78,7 +86,13 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
     fun alternarOrden() = _filtros.update { it.copy(ascendente = !it.ascendente) }
 
     // Regla de validación (pregunta 3 de la guía): vive acá, no en la UI ni en el Repository.
-    fun guardarNota(titulo: String, contenido: String, importante: Boolean, codigoExterno: String = "") {
+    fun guardarNota(
+        titulo: String,
+        contenido: String,
+        importante: Boolean,
+        codigoExterno: String = "",
+        categoriaId: Int? = null
+    ) {
         if (_guardando.value) return // segundo toque mientras guarda: se ignora
         val tituloLimpio = titulo.trim()
         if (tituloLimpio.isEmpty()) {
@@ -88,7 +102,7 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
         _guardando.value = true
         viewModelScope.launch {
             try {
-                val id = repositorio.agregar(tituloLimpio, contenido.trim(), importante, codigoExterno)
+                val id = repositorio.agregar(tituloLimpio, contenido.trim(), importante, codigoExterno, categoriaId)
                 if (id == -1L) {
                     // Ej. 10: IGNORE devolvió -1 -> el código ya existe. No se limpia el formulario para que se pueda corregir.
                     _eventos.send(EventoUi.Mensaje("Ya existe una nota con ese código externo"))
@@ -116,6 +130,23 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
             )
             if (!ok) _eventos.send(EventoUi.Mensaje("La nota ya no existe"))
         }
+    }
+
+    fun agregarCategoria(nombre: String) {
+        val limpio = nombre.trim()
+        if (limpio.isEmpty()) {
+            _eventos.trySend(EventoUi.Mensaje("El nombre de la categoría no puede estar vacío"))
+            return
+        }
+        viewModelScope.launch {
+            if (repositorio.agregarCategoria(limpio) == -1L) {
+                _eventos.send(EventoUi.Mensaje("Ya existe la categoría \"$limpio\""))
+            }
+        }
+    }
+
+    fun eliminarCategoria(categoria: CategoriaEntity) {
+        viewModelScope.launch { repositorio.eliminarCategoria(categoria) }
     }
 
     fun cambiarImportante(nota: NotaEntity) {

@@ -1,6 +1,7 @@
 package com.example.ejercicioskotlinroom.data
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -58,6 +59,37 @@ import androidx.room.PrimaryKey
  *    Por eso conviene pensar bien los nombres de entrada, o fijarlos con @ColumnInfo(name = ...).
  */
 /*
+ * EJERCICIO 11 - Relación con categorías
+ *
+ * Se agrega `categoriaId: Int?` (la clave foránea) con ForeignKey hacia categorias.id y un índice sobre esa columna.
+ *
+ * Decisión: ¿una nota puede existir sin categoría? SÍ. categoriaId es nullable: la categoría es una forma de
+ * organizar, no parte esencial de la nota; obligarla frenaría el alta rápida de notas.
+ *
+ * Desafío - política de borrado: onDelete = SET_NULL.
+ *   Efecto documentado ANTES de ejecutarlo: al borrar una categoría, sus notas NO se borran; quedan con
+ *   categoriaId = NULL ("sin categoría"). Elegí SET_NULL y no CASCADE porque borrar una categoría no debería
+ *   llevarse notas del usuario por delante. (CASCADE borraría todas las notas de esa categoría; RESTRICT/NO_ACTION
+ *   impediría borrar una categoría que tenga notas.) Se prueba en CategoriaDaoTest.
+ *   Room activa PRAGMA foreign_keys = ON, por eso la restricción se hace cumplir de verdad: insertar una nota
+ *   con un categoriaId inexistente falla.
+ * El índice sobre categoriaId acelera buscar las notas de una categoría y los borrados (SQLite tiene que
+ * encontrar las notas hijas para aplicar SET_NULL; sin índice recorre toda la tabla).
+ *
+ * PREGUNTAS DEL EJERCICIO 11
+ * 1) ¿Por qué no guardar directamente una lista de notas dentro de una columna de categoría?
+ *    Una columna guarda un valor atómico. Meter una lista (JSON, texto separado por comas) rompe el modelo
+ *    relacional: no se puede consultar, filtrar ni ordenar notas con SQL, no hay integridad (puede apuntar a
+ *    notas que no existen) y para cambiar una nota hay que reescribir toda la lista. Por eso se hace otra tabla.
+ * 2) ¿Dónde queda la clave foránea?
+ *    En la tabla del lado "muchos": notas.categoriaId referencia categorias.id.
+ * 3) ¿Qué debería ocurrir con las notas si se elimina una categoría?
+ *    Que queden sin categoría (SET_NULL), ver arriba. Es una decisión de producto.
+ * 4) ¿Diferencia entre una entidad y una clase que solo representa un resultado relacional?
+ *    La entidad tiene @Entity, tabla propia y se inserta/actualiza. CategoriaConNotas no tiene tabla: es una
+ *    clase de lectura que Room arma con @Embedded + @Relation a partir de dos tablas.
+ *
+ * ---- (Texto del ejercicio 10, sigue valiendo) ----
  * EJERCICIO 10 - Restricciones, índices y conflictos
  *
  * Cada nota puede tener un `codigoExterno` (opcional) que no debería repetirse -> índice ÚNICO.
@@ -100,9 +132,18 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "notas",
+    foreignKeys = [
+        ForeignKey(
+            entity = CategoriaEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["categoriaId"],
+            onDelete = ForeignKey.SET_NULL
+        )
+    ],
     indices = [
         Index(value = ["codigoExterno"], unique = true),
-        Index(value = ["creadaEn"])
+        Index(value = ["creadaEn"]),
+        Index(value = ["categoriaId"])
     ]
 )
 data class NotaEntity(
@@ -115,5 +156,7 @@ data class NotaEntity(
     // Columna propia del ejercicio (la consigna pedía elegir una).
     val colorEtiqueta: String = "NINGUNO",
     // Ej. 10: identificador opcional que viene de afuera. null = sin código (no choca con otras notas sin código).
-    val codigoExterno: String? = null
+    val codigoExterno: String? = null,
+    // Ej. 11: clave foránea a categorias.id. null = nota sin categoría.
+    val categoriaId: Int? = null
 )

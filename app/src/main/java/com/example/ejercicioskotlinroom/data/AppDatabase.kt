@@ -39,10 +39,11 @@ import androidx.room.RoomDatabase
  * Ese JSON se versiona en git y lo usa el test de migración del ej. 14.
  */
 @Database(
-    entities = [NotaEntity::class],
+    entities = [NotaEntity::class, CategoriaEntity::class],
     version = 1,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun notaDao(): NotaDao
+    abstract fun categoriaDao(): CategoriaDao // Ej. 11
 }

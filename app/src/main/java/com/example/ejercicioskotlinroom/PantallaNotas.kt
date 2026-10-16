@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,9 +36,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ejercicioskotlinroom.data.CategoriaConNotas
 import com.example.ejercicioskotlinroom.data.NotaEntity
 
 /*
+ * EJERCICIO 11 - Categorías (relación 1:N)
+ *
+ * El formulario permite elegir una categoría (chips; "Sin categoría" es el valor por defecto) y hay un panel
+ * "Categorías" para crear y borrar categorías, mostrando las notas de cada una (CategoriaConNotas).
+ * Para probar la política de borrado: crear una categoría, asignarle notas, borrarla y ver que las notas siguen
+ * existiendo como "sin categoría" (SET_NULL). Las respuestas están en NotaEntity.kt, CategoriaEntity.kt y CategoriaDao.kt.
+ *
+ * ---- (Texto del ejercicio 10, sigue valiendo) ----
  * EJERCICIO 10 - Restricciones, índices y conflictos
  *
  * Agrego el campo opcional "Código externo" al formulario. Si se repite, el insert se ignora (-1) y la pantalla
@@ -191,6 +202,8 @@ fun PantallaNotas(
     var contenido by rememberSaveable { mutableStateOf("") }
     var importante by rememberSaveable { mutableStateOf(false) }
     var codigoExterno by rememberSaveable { mutableStateOf("") }
+    var categoriaElegida by rememberSaveable { mutableStateOf<Int?>(null) } // null = sin categoría
+    var nuevaCategoria by rememberSaveable { mutableStateOf("") }
 
     var notaEnEdicion by remember { mutableStateOf<NotaEntity?>(null) }
     var notaPorBorrar by remember { mutableStateOf<NotaEntity?>(null) }
@@ -201,6 +214,8 @@ fun PantallaNotas(
     val total by viewModel.total.collectAsStateWithLifecycle()
     val totalImportantes by viewModel.totalImportantes.collectAsStateWithLifecycle()
     val guardando by viewModel.guardando.collectAsStateWithLifecycle()
+    val categorias by viewModel.categorias.collectAsStateWithLifecycle()
+    val categoriasConNotas by viewModel.categoriasConNotas.collectAsStateWithLifecycle()
 
     // Eventos de una sola vez: mensajes, limpiar formulario, snackbar de deshacer.
     LaunchedEffect(viewModel) {
@@ -212,6 +227,7 @@ fun PantallaNotas(
                     contenido = ""
                     importante = false
                     codigoExterno = ""
+                    categoriaElegida = null
                 }
                 is EventoUi.NotaBorrada -> {
                     val resultado = snackbarHostState.showSnackbar(
@@ -229,7 +245,7 @@ fun PantallaNotas(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Ejercicio 10 - Restricciones e índices", style = MaterialTheme.typography.titleLarge)
+            Text("Ejercicio 11 - Categorías", style = MaterialTheme.typography.titleLarge)
 
             OutlinedTextField(
                 value = titulo,
@@ -251,14 +267,37 @@ fun PantallaNotas(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+            // Categoría de la nota: chips con scroll horizontal. Si se borra la elegida, vuelve a "Sin categoría".
+            val idElegidoValido = categoriaElegida?.takeIf { id -> categorias.any { it.id == id } }
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(selected = idElegidoValido == null, onClick = { categoriaElegida = null }, label = { Text("Sin categoría") })
+                categorias.forEach { c ->
+                    FilterChip(selected = idElegidoValido == c.id, onClick = { categoriaElegida = c.id }, label = { Text(c.nombre) })
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = importante, onCheckedChange = { importante = it })
                 Text("Importante")
             }
             Button(
                 enabled = !guardando,
-                onClick = { viewModel.guardarNota(titulo, contenido, importante, codigoExterno) }
+                onClick = { viewModel.guardarNota(titulo, contenido, importante, codigoExterno, idElegidoValido) }
             ) { Text("Guardar") }
+
+            HorizontalDivider()
+            PanelCategorias(
+                categoriasConNotas = categoriasConNotas,
+                nuevaCategoria = nuevaCategoria,
+                onNuevaCategoriaChange = { nuevaCategoria = it },
+                onAgregar = {
+                    viewModel.agregarCategoria(nuevaCategoria)
+                    nuevaCategoria = ""
+                },
+                onEliminar = viewModel::eliminarCategoria
+            )
 
             HorizontalDivider()
             OutlinedTextField(
@@ -293,7 +332,8 @@ fun PantallaNotas(
                             Checkbox(checked = nota.importante, onCheckedChange = { viewModel.cambiarImportante(nota) })
                             Text(
                                 "#${nota.id} ${nota.titulo} - ${nota.contenido}" +
-                                    (nota.codigoExterno?.let { " [$it]" } ?: ""),
+                                    (nota.codigoExterno?.let { " [$it]" } ?: "") +
+                                    (categorias.firstOrNull { it.id == nota.categoriaId }?.let { " (${it.nombre})" } ?: ""),
                                 modifier = Modifier.weight(1f)
                             )
                             TextButton(onClick = { notaEnEdicion = nota }) { Text("Editar") }
@@ -359,4 +399,39 @@ private fun DialogEditarNota(
         confirmButton = { TextButton(onClick = { onGuardar(titulo, contenido, importante) }) { Text("Guardar cambios") } },
         dismissButton = { TextButton(onClick = onCancelar) { Text("Cancelar") } }
     )
+}
+
+// Panel de categorías: lista cada categoría con la cantidad y los títulos de sus notas (relación 1:N leída con @Relation).
+@Composable
+private fun PanelCategorias(
+    categoriasConNotas: List<CategoriaConNotas>,
+    nuevaCategoria: String,
+    onNuevaCategoriaChange: (String) -> Unit,
+    onAgregar: () -> Unit,
+    onEliminar: (com.example.ejercicioskotlinroom.data.CategoriaEntity) -> Unit
+) {
+    Text("Categorías", style = MaterialTheme.typography.titleMedium)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = nuevaCategoria,
+            onValueChange = onNuevaCategoriaChange,
+            label = { Text("Nueva categoría") },
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        Button(onClick = onAgregar) { Text("Crear") }
+    }
+    if (categoriasConNotas.isEmpty()) {
+        Text("No hay categorías")
+    }
+    categoriasConNotas.forEach { cn ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${cn.categoria.nombre} (${cn.notas.size}): " + cn.notas.joinToString { it.titulo }.ifEmpty { "sin notas" },
+                modifier = Modifier.weight(1f)
+            )
+            // Borrar la categoría NO borra las notas: quedan sin categoría (SET_NULL).
+            TextButton(onClick = { onEliminar(cn.categoria) }) { Text("Borrar") }
+        }
+    }
 }

@@ -21,5 +21,5 @@ class NotasApp : Application() {
     }
 
     // Ej. 9: el repositorio recibe el DAO por constructor; no crea la base, usa la única que hay.
-    val repositorio: NotaRepository by lazy { NotaRepositoryImpl(database.notaDao()) }
+    val repositorio: NotaRepository by lazy { NotaRepositoryImpl(database.notaDao(), database.categoriaDao()) }
 }
