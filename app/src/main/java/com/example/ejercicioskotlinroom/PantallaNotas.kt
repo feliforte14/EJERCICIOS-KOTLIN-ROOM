@@ -1,6 +1,7 @@
 package com.example.ejercicioskotlinroom
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,7 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -29,6 +35,36 @@ import com.example.ejercicioskotlinroom.data.NotaEntity
 import kotlinx.coroutines.launch
 
 /*
+ * EJERCICIO 7 - CRUD completo: editar y eliminar (sobre lo del ej. 5 y 6)
+ *
+ * DAO nuevo: @Update actualizar(nota) y @Delete eliminar(nota).
+ * Desde la lista: tocar "Editar" abre un diálogo con título, contenido e importante; "Guardar cambios" hace el update.
+ * "Borrar" pide una confirmación mínima (AlertDialog) antes de eliminar.
+ * Comprobación de que editar NO crea una fila nueva: el id se muestra en la lista (#id) y no cambia después de editar;
+ * en Database Inspector sigue habiendo la misma cantidad de filas.
+ *
+ * PREGUNTAS DEL EJERCICIO 7
+ * 1) ¿Cómo sabe @Update qué fila debe modificar?
+ *    Por la clave primaria del objeto que le paso: genera UPDATE notas SET ... WHERE id = :id con el id de la nota.
+ *    Por eso al editar uso nota.copy(...) y no armo una NotaEntity nueva.
+ * 2) ¿Qué sucede si se construye un objeto editado con otro id?
+ *    Con id distinto actualiza OTRA fila (la de ese id), pisándole los datos. Con un id que no existe no
+ *    modifica nada y devuelve 0. Con id = 0 tampoco encuentra fila (el 0 no es un id real).
+ *    Para insertar uno nuevo hay que usar @Insert, no @Update.
+ * 3) ¿Conviene borrar apenas se toca un ícono o pedir confirmación?
+ *    Pedir confirmación: borrar es destructivo y un toque accidental es muy fácil en el celu. Es decisión de
+ *    producto además de código. Un término medio (el desafío) es borrar directo pero ofrecer "Deshacer".
+ *    Acá hice las dos: diálogo de confirmación + Snackbar con Deshacer.
+ * 4) ¿Qué parte de esta pantalla podría sobrevivir en memoria sin persistirse?
+ *    Qué nota se está editando, si el diálogo de borrado está abierto, el borrador del formulario y la nota
+ *    borrada que guardo para el "Deshacer": todo estado de UI temporal.
+ *
+ * Desafío (Deshacer solo a nivel de interfaz): al borrar, guardo la NotaEntity eliminada en memoria
+ * (con su id y su creadaEn originales, que es lo que tiene que conservarse) y el Snackbar ofrece "Deshacer",
+ * que la vuelve a insertar. Como el id != 0, Room respeta ese id y la nota vuelve en el mismo lugar.
+ * Si la app se cierra antes de deshacer, esa nota se pierde: el deshacer no es persistente.
+ *
+ * ---- (Texto del ejercicio 6, sigue valiendo) ----
  * EJERCICIO 6 - Leer con Flow y dejar que la pantalla reaccione (sobre el formulario del ej. 5)
  *
  * Cambio: el DAO expone observarNotas(): Flow<List<NotaEntity>> y la pantalla lo consume con
@@ -119,9 +155,27 @@ suspend fun guardarNota(
     )
 }
 
+// Ej. 7: edición. copy() conserva id, creadaEn y colorEtiqueta; solo cambia lo que se editó.
+// Así @Update apunta a la MISMA fila. Devuelve false si el título es inválido o la fila ya no existe.
+suspend fun actualizarNota(
+    dao: NotaDao,
+    original: NotaEntity,
+    titulo: String,
+    contenido: String,
+    importante: Boolean
+): Boolean {
+    val tituloLimpio = titulo.trim()
+    if (tituloLimpio.isEmpty()) return false
+    val filas = dao.actualizar(
+        original.copy(titulo = tituloLimpio, contenido = contenido.trim(), importante = importante)
+    )
+    return filas == 1
+}
+
 @Composable
 fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Borrador del formulario: es estado de UI, por eso rememberSaveable (sobrevive a la rotación).
     var titulo by rememberSaveable { mutableStateOf("") }
@@ -131,65 +185,152 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
     var mensaje by remember { mutableStateOf<String?>(null) }
     var guardando by remember { mutableStateOf(false) }
 
+    // Ej. 7: estado de UI temporal (nada de esto va a la base).
+    var notaEnEdicion by remember { mutableStateOf<NotaEntity?>(null) }
+    var notaPorBorrar by remember { mutableStateOf<NotaEntity?>(null) }
+
     // Ej. 6: la lista viene de un Flow. remember(dao) evita crear el Flow de nuevo en cada recomposición.
     val notas by remember(dao) { dao.observarNotas() }.collectAsStateWithLifecycle(initialValue = emptyList())
 
-    Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text("Ejercicio 6 - Notas con Flow", style = MaterialTheme.typography.titleLarge)
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Ejercicio 7 - CRUD de notas", style = MaterialTheme.typography.titleLarge)
 
-        OutlinedTextField(
-            value = titulo,
-            onValueChange = { titulo = it },
-            label = { Text("Título") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = contenido,
-            onValueChange = { contenido = it },
-            label = { Text("Contenido") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = importante, onCheckedChange = { importante = it })
-            Text("Importante")
-        }
+            OutlinedTextField(
+                value = titulo,
+                onValueChange = { titulo = it },
+                label = { Text("Título") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = contenido,
+                onValueChange = { contenido = it },
+                label = { Text("Contenido") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = importante, onCheckedChange = { importante = it })
+                Text("Importante")
+            }
 
-        Button(
-            enabled = !guardando, // evita que dos toques rápidos disparen dos inserts
-            onClick = {
-                guardando = true
-                scope.launch {
-                    val id = guardarNota(dao, titulo, contenido, importante)
-                    if (id == null) {
-                        mensaje = "El título no puede estar vacío"
-                    } else {
-                        mensaje = "Nota guardada (id $id)"
-                        titulo = ""
-                        contenido = ""
-                        importante = false
-                        // Ej. 6: ya no hay que releer la lista a mano, el Flow la actualiza solo.
+            Button(
+                enabled = !guardando, // evita que dos toques rápidos disparen dos inserts
+                onClick = {
+                    guardando = true
+                    scope.launch {
+                        val id = guardarNota(dao, titulo, contenido, importante)
+                        if (id == null) {
+                            mensaje = "El título no puede estar vacío"
+                        } else {
+                            mensaje = "Nota guardada (id $id)"
+                            titulo = ""
+                            contenido = ""
+                            importante = false
+                        }
+                        guardando = false
                     }
-                    guardando = false
                 }
-            }
-        ) { Text("Guardar") }
+            ) { Text("Guardar") }
 
-        mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
-        Text("Notas guardadas: ${notas.size}", style = MaterialTheme.typography.titleMedium)
-        if (notas.isEmpty()) {
-            // Desafío: estado vacío calculado desde la misma lista, sin lista paralela.
-            Text("Todavía no hay notas")
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(notas, key = { it.id }) { nota ->
-                    Text("#${nota.id} ${if (nota.importante) "★ " else ""}${nota.titulo} - ${nota.contenido}")
+            Text("Notas guardadas: ${notas.size}", style = MaterialTheme.typography.titleMedium)
+            if (notas.isEmpty()) {
+                Text("Todavía no hay notas")
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(notas, key = { it.id }) { nota ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Se muestra el id para comprobar que editar no cambia la identidad de la fila.
+                            Text(
+                                "#${nota.id} ${if (nota.importante) "★ " else ""}${nota.titulo} - ${nota.contenido}",
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { notaEnEdicion = nota }) { Text("Editar") }
+                            TextButton(onClick = { notaPorBorrar = nota }) { Text("Borrar") }
+                        }
+                    }
                 }
             }
         }
+
+        SnackbarHost(snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
     }
+
+    // --- Diálogo de edición ---
+    notaEnEdicion?.let { nota ->
+        DialogEditarNota(
+            nota = nota,
+            onCancelar = { notaEnEdicion = null },
+            onGuardar = { t, c, i ->
+                scope.launch {
+                    if (actualizarNota(dao, nota, t, c, i)) {
+                        notaEnEdicion = null
+                    } else {
+                        snackbarHostState.showSnackbar("No se pudo guardar: título vacío o la nota ya no existe")
+                    }
+                }
+            }
+        )
+    }
+
+    // --- Confirmación de borrado + deshacer ---
+    notaPorBorrar?.let { nota ->
+        AlertDialog(
+            onDismissRequest = { notaPorBorrar = null },
+            title = { Text("¿Borrar la nota?") },
+            text = { Text("\"${nota.titulo}\" se va a eliminar.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    notaPorBorrar = null
+                    scope.launch {
+                        dao.eliminar(nota)
+                        // `nota` queda guardada en esta variable: es el dato temporal que permite reinsertar.
+                        val resultado = snackbarHostState.showSnackbar(
+                            message = "Nota borrada",
+                            actionLabel = "Deshacer"
+                        )
+                        if (resultado == SnackbarResult.ActionPerformed) dao.insertar(nota)
+                    }
+                }) { Text("Borrar") }
+            },
+            dismissButton = { TextButton(onClick = { notaPorBorrar = null }) { Text("Cancelar") } }
+        )
+    }
+}
+
+@Composable
+private fun DialogEditarNota(
+    nota: NotaEntity,
+    onCancelar: () -> Unit,
+    onGuardar: (titulo: String, contenido: String, importante: Boolean) -> Unit
+) {
+    // Los campos arrancan con los valores actuales de la nota que se abrió.
+    var titulo by remember(nota.id) { mutableStateOf(nota.titulo) }
+    var contenido by remember(nota.id) { mutableStateOf(nota.contenido) }
+    var importante by remember(nota.id) { mutableStateOf(nota.importante) }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Editar nota #${nota.id}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = titulo, onValueChange = { titulo = it }, label = { Text("Título") }, singleLine = true)
+                OutlinedTextField(value = contenido, onValueChange = { contenido = it }, label = { Text("Contenido") })
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = importante, onCheckedChange = { importante = it })
+                    Text("Importante")
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onGuardar(titulo, contenido, importante) }) { Text("Guardar cambios") } },
+        dismissButton = { TextButton(onClick = onCancelar) { Text("Cancelar") } }
+    )
 }

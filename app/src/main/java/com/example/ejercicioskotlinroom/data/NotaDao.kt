@@ -1,8 +1,10 @@
 package com.example.ejercicioskotlinroom.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 /*
@@ -56,6 +58,15 @@ interface NotaDao {
     // que cambia la tabla notas. Cada emisión trae la lista completa y actualizada.
     @Query("SELECT * FROM notas ORDER BY creadaEn DESC")
     fun observarNotas(): Flow<List<NotaEntity>>
+
+    // EJERCICIO 7: Room arma el UPDATE ... WHERE id = nota.id usando la clave primaria del objeto.
+    // Devuelve la cantidad de filas modificadas (0 si ese id ya no existe).
+    @Update
+    suspend fun actualizar(nota: NotaEntity): Int
+
+    // Idem con DELETE ... WHERE id = nota.id. Devuelve filas borradas.
+    @Delete
+    suspend fun eliminar(nota: NotaEntity): Int
 
     // Pensada para pruebas controladas: deja la tabla vacía.
     @Query("DELETE FROM notas")
