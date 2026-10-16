@@ -14,13 +14,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,6 +29,41 @@ import com.example.ejercicioskotlinroom.data.NotaEntity
 import kotlinx.coroutines.launch
 
 /*
+ * EJERCICIO 6 - Leer con Flow y dejar que la pantalla reaccione (sobre el formulario del ej. 5)
+ *
+ * Cambio: el DAO expone observarNotas(): Flow<List<NotaEntity>> y la pantalla lo consume con
+ * collectAsStateWithLifecycle(). La lista se actualiza sola cuando se inserta una fila: ya no hay
+ * que releer a mano después de guardar ni botón "Recargar".
+ *
+ * Prueba concreta (a hacer en Android Studio): dejar la lista abierta y agregar una fila desde Database Inspector
+ * (tabla notas > "Add row"). Lo esperable es que la lista se actualice sola, porque Room invalida el Flow cuando
+ * cambia la tabla "notas"; Database Inspector avisa a Room de las escrituras que hace. Falta anotar qué se vio
+ * realmente en el equipo (si no se actualiza, probar insertando desde la propia app para descartar el inspector).
+ *
+ * PREGUNTAS DEL EJERCICIO 6
+ * 1) ¿Diferencia entre Flow<List<NotaEntity>> y List<NotaEntity>?
+ *    List es una foto del momento en que se consultó: no se entera de cambios posteriores.
+ *    Flow es un flujo que emite una lista cada vez que la tabla cambia; el que lo recolecta recibe
+ *    las actualizaciones sin volver a pedir.
+ * 2) ¿Room vuelve a ejecutar la consulta cuando detecta cambios en la tabla relevante?
+ *    Sí. Mientras haya alguien recolectando el Flow, Room vuelve a correr el SELECT cada vez que
+ *    se invalida alguna tabla que la consulta lee (notas) y emite el resultado nuevo.
+ * 3) ¿Es lo mismo un Flow que un estado de Compose?
+ *    No. Flow es de corrutinas (stream asíncrono, no sabe nada de la UI). El State de Compose guarda un
+ *    valor y le avisa a Compose que recomponga. collectAsStateWithLifecycle convierte uno en el otro.
+ * 4) ¿Qué responsabilidad tiene collectAsState / collectAsStateWithLifecycle en este recorrido?
+ *    Es el puente Flow -> State: recolecta el Flow, guarda el último valor en un State (con un valor inicial,
+ *    emptyList() acá) y dispara recomposición en cada emisión. La versión WithLifecycle además deja de
+ *    recolectar cuando la app pasa a segundo plano (por debajo de STARTED) y retoma al volver: no gasta
+ *    recursos ni mantiene la consulta viva sin que nadie la mire.
+ *
+ * Cadena completa: Room (tabla cambia) -> Flow emite lista nueva -> collectAsStateWithLifecycle
+ * actualiza el State -> LazyColumn se recompone.
+ *
+ * Desafío: estado vacío "Todavía no hay notas" derivado de la MISMA lista (notas.isEmpty()),
+ * sin inventar una segunda lista aparte.
+ *
+ * ---- (Texto del ejercicio 5, sigue valiendo) ----
  * EJERCICIO 5 - Alta de datos desde Compose
  *
  * Formulario: título, contenido, importante y botón Guardar, con mensaje corto al terminar.
@@ -96,15 +131,14 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
     var mensaje by remember { mutableStateOf<String?>(null) }
     var guardando by remember { mutableStateOf(false) }
 
-    // Lista "básica": se lee una vez al entrar y después de cada guardado. El Flow que la mantiene sola llega en el ej. 6.
-    var notas by remember { mutableStateOf(emptyList<NotaEntity>()) }
-    LaunchedEffect(Unit) { notas = dao.obtenerTodasUnaVez() }
+    // Ej. 6: la lista viene de un Flow. remember(dao) evita crear el Flow de nuevo en cada recomposición.
+    val notas by remember(dao) { dao.observarNotas() }.collectAsStateWithLifecycle(initialValue = emptyList())
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("Ejercicio 5 - Alta de notas", style = MaterialTheme.typography.titleLarge)
+        Text("Ejercicio 6 - Notas con Flow", style = MaterialTheme.typography.titleLarge)
 
         OutlinedTextField(
             value = titulo,
@@ -137,7 +171,7 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
                         titulo = ""
                         contenido = ""
                         importante = false
-                        notas = dao.obtenerTodasUnaVez()
+                        // Ej. 6: ya no hay que releer la lista a mano, el Flow la actualiza solo.
                     }
                     guardando = false
                 }
@@ -147,9 +181,14 @@ fun PantallaNotas(dao: NotaDao, modifier: Modifier = Modifier) {
         mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
         Text("Notas guardadas: ${notas.size}", style = MaterialTheme.typography.titleMedium)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(notas, key = { it.id }) { nota ->
-                Text("#${nota.id} ${if (nota.importante) "★ " else ""}${nota.titulo} - ${nota.contenido}")
+        if (notas.isEmpty()) {
+            // Desafío: estado vacío calculado desde la misma lista, sin lista paralela.
+            Text("Todavía no hay notas")
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                items(notas, key = { it.id }) { nota ->
+                    Text("#${nota.id} ${if (nota.importante) "★ " else ""}${nota.titulo} - ${nota.contenido}")
+                }
             }
         }
     }

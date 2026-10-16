@@ -3,6 +3,7 @@ package com.example.ejercicioskotlinroom.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 /*
  * EJERCICIO 3 - DAO: escribir y preguntar a la base
@@ -50,6 +51,11 @@ interface NotaDao {
     // Lectura puntual ("una vez"): trae la lista actual y listo. Más adelante la reemplazo por un Flow (ej. 6).
     @Query("SELECT * FROM notas ORDER BY creadaEn DESC")
     suspend fun obtenerTodasUnaVez(): List<NotaEntity>
+
+    // EJERCICIO 6: lectura observable. NO es suspend: devuelve un Flow "frío" y Room lo re-ejecuta cada vez
+    // que cambia la tabla notas. Cada emisión trae la lista completa y actualizada.
+    @Query("SELECT * FROM notas ORDER BY creadaEn DESC")
+    fun observarNotas(): Flow<List<NotaEntity>>
 
     // Pensada para pruebas controladas: deja la tabla vacía.
     @Query("DELETE FROM notas")
