@@ -59,6 +59,10 @@ import androidx.room.PrimaryKey
  *    Por eso conviene pensar bien los nombres de entrada, o fijarlos con @ColumnInfo(name = ...).
  */
 /*
+ * EJERCICIO 12 - Se agrega `prioridad: Prioridad` (enum). Room lo guarda como TEXT gracias a Converters.kt
+ * (ahí están las respuestas y el detalle de qué se guarda). Columna: prioridad TEXT NOT NULL.
+ *
+ * ---- (Texto del ejercicio 11, sigue valiendo) ----
  * EJERCICIO 11 - Relación con categorías
  *
  * Se agrega `categoriaId: Int?` (la clave foránea) con ForeignKey hacia categorias.id y un índice sobre esa columna.
@@ -158,5 +162,7 @@ data class NotaEntity(
     // Ej. 10: identificador opcional que viene de afuera. null = sin código (no choca con otras notas sin código).
     val codigoExterno: String? = null,
     // Ej. 11: clave foránea a categorias.id. null = nota sin categoría.
-    val categoriaId: Int? = null
+    val categoriaId: Int? = null,
+    // Ej. 12: enum guardado como texto mediante TypeConverter.
+    val prioridad: Prioridad = Prioridad.MEDIA
 )

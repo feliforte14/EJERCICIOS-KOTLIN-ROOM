@@ -2,6 +2,7 @@ package com.example.ejercicioskotlinroom.data
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
 /*
  * EJERCICIO 4 - Crear la base y mirarla por dentro
@@ -43,6 +44,8 @@ import androidx.room.RoomDatabase
     version = 1,
     exportSchema = true
 )
+// Ej. 12: registra los conversores para toda la base (entidades y DAO).
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun notaDao(): NotaDao
     abstract fun categoriaDao(): CategoriaDao // Ej. 11

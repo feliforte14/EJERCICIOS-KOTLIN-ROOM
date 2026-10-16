@@ -44,7 +44,8 @@ interface NotaRepository {
         contenido: String,
         importante: Boolean,
         codigoExterno: String? = null,
-        categoriaId: Int? = null
+        categoriaId: Int? = null,
+        prioridad: Prioridad = Prioridad.MEDIA
     ): Long
     suspend fun actualizar(nota: NotaEntity): Boolean
     suspend fun eliminar(nota: NotaEntity)
@@ -75,7 +76,8 @@ class NotaRepositoryImpl(
         contenido: String,
         importante: Boolean,
         codigoExterno: String?,
-        categoriaId: Int?
+        categoriaId: Int?,
+        prioridad: Prioridad
     ): Long =
         dao.insertar(
             NotaEntity(
@@ -85,6 +87,7 @@ class NotaRepositoryImpl(
                 // "" no es "sin código": chocaría con otro "". Lo normalizo a null.
                 codigoExterno = codigoExterno?.trim()?.ifEmpty { null },
                 categoriaId = categoriaId,
+                prioridad = prioridad,
                 creadaEn = System.currentTimeMillis() // el momento del guardado lo fija esta capa
             )
         )

@@ -38,8 +38,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ejercicioskotlinroom.data.CategoriaConNotas
 import com.example.ejercicioskotlinroom.data.NotaEntity
+import com.example.ejercicioskotlinroom.data.Prioridad
 
 /*
+ * EJERCICIO 12 - Prioridad (enum + TypeConverter)
+ *
+ * El formulario tiene un selector de prioridad (BAJA / MEDIA / ALTA) y la lista la muestra. En la base se guarda el
+ * nombre como texto; mirar la columna `prioridad` en Database Inspector. Detalle y respuestas en data/Converters.kt.
+ *
+ * ---- (Texto del ejercicio 11, sigue valiendo) ----
  * EJERCICIO 11 - Categorías (relación 1:N)
  *
  * El formulario permite elegir una categoría (chips; "Sin categoría" es el valor por defecto) y hay un panel
@@ -204,6 +211,7 @@ fun PantallaNotas(
     var codigoExterno by rememberSaveable { mutableStateOf("") }
     var categoriaElegida by rememberSaveable { mutableStateOf<Int?>(null) } // null = sin categoría
     var nuevaCategoria by rememberSaveable { mutableStateOf("") }
+    var prioridad by rememberSaveable { mutableStateOf(Prioridad.MEDIA) } // enum: es Serializable, entra en el Bundle
 
     var notaEnEdicion by remember { mutableStateOf<NotaEntity?>(null) }
     var notaPorBorrar by remember { mutableStateOf<NotaEntity?>(null) }
@@ -228,6 +236,7 @@ fun PantallaNotas(
                     importante = false
                     codigoExterno = ""
                     categoriaElegida = null
+                    prioridad = Prioridad.MEDIA
                 }
                 is EventoUi.NotaBorrada -> {
                     val resultado = snackbarHostState.showSnackbar(
@@ -245,7 +254,7 @@ fun PantallaNotas(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Ejercicio 11 - Categorías", style = MaterialTheme.typography.titleLarge)
+            Text("Ejercicio 12 - Prioridad (TypeConverter)", style = MaterialTheme.typography.titleLarge)
 
             OutlinedTextField(
                 value = titulo,
@@ -278,13 +287,19 @@ fun PantallaNotas(
                     FilterChip(selected = idElegidoValido == c.id, onClick = { categoriaElegida = c.id }, label = { Text(c.nombre) })
                 }
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Prioridad:")
+                Prioridad.entries.forEach { p ->
+                    FilterChip(selected = prioridad == p, onClick = { prioridad = p }, label = { Text(p.name) })
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = importante, onCheckedChange = { importante = it })
                 Text("Importante")
             }
             Button(
                 enabled = !guardando,
-                onClick = { viewModel.guardarNota(titulo, contenido, importante, codigoExterno, idElegidoValido) }
+                onClick = { viewModel.guardarNota(titulo, contenido, importante, codigoExterno, idElegidoValido, prioridad) }
             ) { Text("Guardar") }
 
             HorizontalDivider()
@@ -331,7 +346,7 @@ fun PantallaNotas(
                             // Acción de alto nivel del ViewModel: cambiarImportante (no sabe nada de @Update).
                             Checkbox(checked = nota.importante, onCheckedChange = { viewModel.cambiarImportante(nota) })
                             Text(
-                                "#${nota.id} ${nota.titulo} - ${nota.contenido}" +
+                                "#${nota.id} [${nota.prioridad}] ${nota.titulo} - ${nota.contenido}" +
                                     (nota.codigoExterno?.let { " [$it]" } ?: "") +
                                     (categorias.firstOrNull { it.id == nota.categoriaId }?.let { " (${it.nombre})" } ?: ""),
                                 modifier = Modifier.weight(1f)

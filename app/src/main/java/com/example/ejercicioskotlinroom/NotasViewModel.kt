@@ -9,6 +9,7 @@ import com.example.ejercicioskotlinroom.data.CategoriaConNotas
 import com.example.ejercicioskotlinroom.data.CategoriaEntity
 import com.example.ejercicioskotlinroom.data.NotaEntity
 import com.example.ejercicioskotlinroom.data.NotaRepository
+import com.example.ejercicioskotlinroom.data.Prioridad
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,7 +92,8 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
         contenido: String,
         importante: Boolean,
         codigoExterno: String = "",
-        categoriaId: Int? = null
+        categoriaId: Int? = null,
+        prioridad: Prioridad = Prioridad.MEDIA
     ) {
         if (_guardando.value) return // segundo toque mientras guarda: se ignora
         val tituloLimpio = titulo.trim()
@@ -102,7 +104,7 @@ class NotasViewModel(private val repositorio: NotaRepository) : ViewModel() {
         _guardando.value = true
         viewModelScope.launch {
             try {
-                val id = repositorio.agregar(tituloLimpio, contenido.trim(), importante, codigoExterno, categoriaId)
+                val id = repositorio.agregar(tituloLimpio, contenido.trim(), importante, codigoExterno, categoriaId, prioridad)
                 if (id == -1L) {
                     // Ej. 10: IGNORE devolvió -1 -> el código ya existe. No se limpia el formulario para que se pueda corregir.
                     _eventos.send(EventoUi.Mensaje("Ya existe una nota con ese código externo"))
