@@ -1,4 +1,4 @@
-package com.example.ejercicioskotlinroom.data
+package com.example.ejercicioskotlinroom.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey

@@ -1,16 +1,16 @@
-package com.example.ejercicioskotlinroom
+package com.example.ejercicioskotlinroom.presentation.notas
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -36,8 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ejercicioskotlinroom.data.CategoriaConNotas
-import com.example.ejercicioskotlinroom.data.NotaEntity
+import com.example.ejercicioskotlinroom.data.local.entity.CategoriaConNotas
+import com.example.ejercicioskotlinroom.data.local.entity.CategoriaEntity
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
 
 /*
  * EJERCICIO 11 - Categorías (relación 1:N)
@@ -408,7 +409,7 @@ private fun PanelCategorias(
     nuevaCategoria: String,
     onNuevaCategoriaChange: (String) -> Unit,
     onAgregar: () -> Unit,
-    onEliminar: (com.example.ejercicioskotlinroom.data.CategoriaEntity) -> Unit
+    onEliminar: (CategoriaEntity) -> Unit
 ) {
     Text("Categorías", style = MaterialTheme.typography.titleMedium)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

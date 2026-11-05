@@ -1,4 +1,4 @@
-package com.example.ejercicioskotlinroom.ui.theme
+package com.example.ejercicioskotlinroom.core.theme
 
 import android.app.Activity
 import android.os.Build
