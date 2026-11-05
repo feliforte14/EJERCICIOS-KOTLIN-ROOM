@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import com.example.ejercicioskotlinroom.ui.theme.EjerciciosKotlinRoomTheme
+import com.example.ejercicioskotlinroom.core.theme.EjerciciosKotlinRoomTheme
+import com.example.ejercicioskotlinroom.presentation.info.PantallaInfo
 
 // Proyecto base de la guía de Room. Cada ejercicio vive en su propia rama (ver README.md).
 class MainActivity : ComponentActivity() {
@@ -18,8 +19,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             EjerciciosKotlinRoomTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Ejercicio 1: pantalla para comparar remember vs rememberSaveable (sin Room todavía).
-                    PantallaEstadoEnMemoria(modifier = Modifier.padding(innerPadding))
+                    // Ejercicio 2: la guia no pide pantalla; se muestra donde esta el codigo.
+                    PantallaInfo(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
