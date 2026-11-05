@@ -10,7 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.ejercicioskotlinroom.ui.theme.EjerciciosKotlinRoomTheme
+import com.example.ejercicioskotlinroom.core.theme.EjerciciosKotlinRoomTheme
 
 // Proyecto base de la guía de Room. Cada ejercicio vive en su propia rama (ver README.md).
 class MainActivity : ComponentActivity() {
