@@ -1,4 +1,4 @@
-package com.example.ejercicioskotlinroom
+package com.example.ejercicioskotlinroom.data.local
 
 import android.content.Context
 import androidx.room.Room
@@ -6,9 +6,6 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.example.ejercicioskotlinroom.data.AppDatabase
-import com.example.ejercicioskotlinroom.data.MIGRATION_1_2
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
