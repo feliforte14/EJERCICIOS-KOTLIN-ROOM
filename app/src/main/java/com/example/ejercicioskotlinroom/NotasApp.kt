@@ -2,7 +2,7 @@ package com.example.ejercicioskotlinroom
 
 import android.app.Application
 import androidx.room.Room
-import com.example.ejercicioskotlinroom.data.AppDatabase
+import com.example.ejercicioskotlinroom.data.local.AppDatabase
 
 /*
  * Application: el objeto que vive tanto como el proceso. Acá se construye la ÚNICA instancia de la base
