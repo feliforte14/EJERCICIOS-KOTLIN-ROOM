@@ -1,9 +1,10 @@
-package com.example.ejercicioskotlinroom.data
+package com.example.ejercicioskotlinroom.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.ejercicioskotlinroom.domain.model.Prioridad
 
 /*
  * EJERCICIO 2 - Primera Entity: decidir qué se guarda

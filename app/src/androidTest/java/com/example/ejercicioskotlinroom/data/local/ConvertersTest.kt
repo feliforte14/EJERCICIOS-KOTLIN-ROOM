@@ -1,13 +1,11 @@
-package com.example.ejercicioskotlinroom
+package com.example.ejercicioskotlinroom.data.local
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.ejercicioskotlinroom.data.AppDatabase
-import com.example.ejercicioskotlinroom.data.Converters
-import com.example.ejercicioskotlinroom.data.NotaEntity
-import com.example.ejercicioskotlinroom.data.Prioridad
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
+import com.example.ejercicioskotlinroom.domain.model.Prioridad
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
