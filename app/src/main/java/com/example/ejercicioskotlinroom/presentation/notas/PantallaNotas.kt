@@ -47,7 +47,7 @@ import com.example.ejercicioskotlinroom.domain.model.Prioridad
  * EJERCICIO 14 - Migración 1 -> 2 (archivada)
  *
  * Cada nota puede archivarse y un chip "Archivadas" cambia entre ver las activas y las archivadas.
- * La migración (versión 1 a 2, conservando datos) y sus respuestas están en data/Migrations.kt.
+ * La migración (versión 1 a 2, conservando datos) y sus respuestas están en data/local/Migrations.kt.
  *
  * ---- (Texto del ejercicio 13, sigue valiendo) ----
  * EJERCICIO 13 - Transacciones
@@ -60,7 +60,7 @@ import com.example.ejercicioskotlinroom.domain.model.Prioridad
  * EJERCICIO 12 - Prioridad (enum + TypeConverter)
  *
  * El formulario tiene un selector de prioridad (BAJA / MEDIA / ALTA) y la lista la muestra. En la base se guarda el
- * nombre como texto; mirar la columna `prioridad` en Database Inspector. Detalle y respuestas en data/Converters.kt.
+ * nombre como texto; mirar la columna `prioridad` en Database Inspector. Detalle y respuestas en data/local/Converters.kt.
  *
  * ---- (Texto del ejercicio 11, sigue valiendo) ----
  * EJERCICIO 11 - Categorías (relación 1:N)
