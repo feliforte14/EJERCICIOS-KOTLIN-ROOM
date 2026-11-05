@@ -1,6 +1,7 @@
-package com.example.ejercicioskotlinroom.data
+package com.example.ejercicioskotlinroom.data.local
 
 import androidx.room.TypeConverter
+import com.example.ejercicioskotlinroom.domain.model.Prioridad
 
 /*
  * EJERCICIO 12 - TypeConverters: cuando SQLite no conoce tu tipo
