@@ -45,7 +45,7 @@ import com.example.ejercicioskotlinroom.domain.model.Prioridad
  * EJERCICIO 12 - Prioridad (enum + TypeConverter)
  *
  * El formulario tiene un selector de prioridad (BAJA / MEDIA / ALTA) y la lista la muestra. En la base se guarda el
- * nombre como texto; mirar la columna `prioridad` en Database Inspector. Detalle y respuestas en data/Converters.kt.
+ * nombre como texto; mirar la columna `prioridad` en Database Inspector. Detalle y respuestas en data/local/Converters.kt.
  *
  * ---- (Texto del ejercicio 11, sigue valiendo) ----
  * EJERCICIO 11 - Categorías (relación 1:N)
