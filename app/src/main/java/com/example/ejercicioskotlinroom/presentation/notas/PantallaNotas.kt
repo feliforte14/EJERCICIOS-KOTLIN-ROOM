@@ -1,4 +1,4 @@
-package com.example.ejercicioskotlinroom
+package com.example.ejercicioskotlinroom.presentation.notas
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ejercicioskotlinroom.data.NotaEntity
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
 
 /*
  * EJERCICIO 10 - Restricciones, índices y conflictos

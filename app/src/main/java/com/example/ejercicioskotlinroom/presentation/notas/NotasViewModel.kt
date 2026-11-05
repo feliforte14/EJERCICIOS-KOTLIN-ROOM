@@ -1,12 +1,13 @@
-package com.example.ejercicioskotlinroom
+package com.example.ejercicioskotlinroom.presentation.notas
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.ejercicioskotlinroom.data.NotaEntity
-import com.example.ejercicioskotlinroom.data.NotaRepository
+import com.example.ejercicioskotlinroom.NotasApp
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
+import com.example.ejercicioskotlinroom.data.repository.NotaRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow

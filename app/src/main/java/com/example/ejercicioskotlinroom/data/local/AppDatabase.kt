@@ -1,7 +1,9 @@
-package com.example.ejercicioskotlinroom.data
+package com.example.ejercicioskotlinroom.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.example.ejercicioskotlinroom.data.local.dao.NotaDao
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
 
 /*
  * EJERCICIO 4 - Crear la base y mirarla por dentro
