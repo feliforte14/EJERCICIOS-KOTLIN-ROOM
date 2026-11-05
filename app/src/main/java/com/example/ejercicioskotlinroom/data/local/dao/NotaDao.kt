@@ -1,8 +1,9 @@
-package com.example.ejercicioskotlinroom.data
+package com.example.ejercicioskotlinroom.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
 import kotlinx.coroutines.flow.Flow
 
 /*

@@ -1,4 +1,4 @@
-package com.example.ejercicioskotlinroom.ui.theme
+package com.example.ejercicioskotlinroom.core.theme
 
 import androidx.compose.ui.graphics.Color
 

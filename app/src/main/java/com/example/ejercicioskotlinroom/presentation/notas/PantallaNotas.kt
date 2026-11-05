@@ -1,4 +1,4 @@
-package com.example.ejercicioskotlinroom
+package com.example.ejercicioskotlinroom.presentation.notas
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,12 +20,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.ejercicioskotlinroom.data.NotaDao
-import com.example.ejercicioskotlinroom.data.NotaEntity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ejercicioskotlinroom.data.local.dao.NotaDao
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
 import kotlinx.coroutines.launch
 
 /*
