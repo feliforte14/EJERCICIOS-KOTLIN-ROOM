@@ -1,12 +1,11 @@
-package com.example.ejercicioskotlinroom
+package com.example.ejercicioskotlinroom.data.local.dao
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.ejercicioskotlinroom.data.AppDatabase
-import com.example.ejercicioskotlinroom.data.NotaDao
-import com.example.ejercicioskotlinroom.data.NotaEntity
+import com.example.ejercicioskotlinroom.data.local.AppDatabase
+import com.example.ejercicioskotlinroom.data.local.entity.NotaEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
