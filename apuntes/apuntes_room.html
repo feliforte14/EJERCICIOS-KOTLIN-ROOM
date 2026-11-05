@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Apuntes Room – DA1</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root { --azul:#1d3a8a; --azul-claro:#eef2fb; --verde:#1f6b3a; --verde-claro:#eef7f0;
+          --ambar:#7a5a00; --ambar-claro:#fff8e1; --gris:#555; --borde:#cfd6e4; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 10.5pt;
+         line-height: 1.45; color: #1a1a1a; background:#fff; margin:0; }
+  header.portada { border-bottom: 3px solid var(--azul); padding-bottom: 10px; margin-bottom: 18px; }
+  header.portada h1 { margin:0; font-size: 20pt; color: var(--azul); }
+  header.portada p { margin: 4px 0 0; color: var(--gris); }
+  h2 { font-size: 15pt; color: var(--azul); margin: 22px 0 6px; border-bottom: 1px solid var(--borde); padding-bottom: 4px; }
+  h3 { font-size: 11.5pt; margin: 16px 0 6px; }
+  p { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.8pt; page-break-inside: avoid; }
+  th, td { border: 1px solid var(--borde); padding: 5px 7px; vertical-align: top; text-align: left; }
+  th { background: var(--azul-claro); }
+  code { font-family: "SF Mono", Menlo, monospace; font-size: 9pt; background: #f2f4f8; padding: 0 3px; border-radius: 3px; }
+  pre { font-family: "SF Mono", Menlo, monospace; font-size: 8.4pt; background: #f6f7fa; border: 1px solid var(--borde);
+        border-radius: 6px; padding: 9px 11px; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; page-break-inside: avoid; margin: 8px 0; }
+  .caja { border-radius: 6px; padding: 8px 12px; margin: 10px 0; page-break-inside: avoid; }
+  .clave { background: var(--azul-claro); border-left: 4px solid var(--azul); }
+  .regla { background: var(--verde-claro); border-left: 4px solid var(--verde); }
+  .ojo { background: var(--ambar-claro); border-left: 4px solid var(--ambar); }
+  .caja strong.titulo { display:block; margin-bottom: 3px; }
+  .tag { display:inline-block; padding: 0 6px; border-radius: 10px; font-size: 8.8pt; font-weight: 600; }
+  .v { background:#e3ecff; color:#1d3a8a; } .vm { background:#e5f5ea; color:#1f6b3a; } .r { background:#fff0d6; color:#7a5a00; }
+  ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+  .salto { page-break-before: always; }
+  .figs { display:flex; gap:10px; align-items:flex-end; justify-content:center; margin:10px 0; break-inside: avoid; }
+  .figs figure { margin:0; flex:0 0 auto; text-align:center; font-size:8.6pt; color:var(--gris); }
+  .figs img { border:1px solid var(--borde); border-radius:6px; display:block; margin:0 auto 4px; }
+  
+  .pocas { background:#f3f0ff; border-left:4px solid #5b3fb8; }
+  .novato { background:#fff4ec; border-left:4px solid #c2561a; }
+  .novato ul { margin-bottom:0; }
+  .novato li { margin:4px 0; }
+  .bloque { break-inside: avoid; page-break-inside: avoid; }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+</style>
+</head>
+<body>
+<header class="portada">
+  <h1>Apuntes – Persistencia local con Room</h1>
+  <p>Desarrollo de Aplicaciones I · UADE · Guía de Ejercicios: Persistencia local con Room (v1.0)</p>
+  <p>Proyecto: <code>EJERCICIOS-KOTLIN-ROOM</code> · Felipe Forte · Kotlin + Jetpack Compose + Room 2.8.5 (KSP)</p>
+</header>
+<p>Cómo leer estos apuntes: cada ejercicio tiene un recuadro <strong>“En pocas palabras”</strong> (qué se hace y por qué), uno de
+<strong>“Aclaraciones para novatos”</strong> (lo que suele confundir), la <strong>explicación con el código real</strong> del proyecto, las
+<strong>pruebas hechas en el emulador</strong> (con capturas y consultas a la base) y las <strong>respuestas a las preguntas de la guía</strong>.
+Todas las consultas a la base se hicieron copiando el archivo SQLite del emulador y consultándolo con <code>sqlite3</code>: muestran lo que
+realmente quedó guardado.</p>
+
+<h2 class="salto">Glosario para empezar</h2>
+<table>
+  <tr><th style="width:24%">Término</th><th>Qué significa, en simple</th></tr>
+  <tr><td><strong>Persistir</strong></td><td>Guardar un dato de forma que sobreviva a cerrar la app, matar el proceso o reiniciar el teléfono.</td></tr>
+  <tr><td><strong>SQLite</strong></td><td>El motor de base de datos que viene en Android. Guarda todo en <strong>un archivo</strong> dentro de la app (por ejemplo <code>notas.db</code>).</td></tr>
+  <tr><td><strong>Tabla / fila / columna</strong></td><td>Una tabla es como una planilla: cada <em>fila</em> es un registro (una nota) y cada <em>columna</em> un dato (título, fecha).</td></tr>
+  <tr><td><strong>SQL</strong></td><td>El idioma para hablarle a la base: <code>SELECT</code> (leer), <code>INSERT</code> (agregar), <code>UPDATE</code> (modificar), <code>DELETE</code> (borrar).</td></tr>
+  <tr><td><strong>Room</strong></td><td>Biblioteca de Android que se pone encima de SQLite: uno escribe clases de Kotlin con anotaciones y Room genera el código que habla con SQLite.</td></tr>
+  <tr><td><strong>Entity</strong></td><td>Una <code>data class</code> con <code>@Entity</code>: describe <strong>una tabla</strong>. Cada objeto = una fila.</td></tr>
+  <tr><td><strong>DAO</strong></td><td>Interface con <code>@Dao</code>: lista las <strong>operaciones</strong> sobre la tabla (insertar, buscar, borrar). Room escribe la implementación.</td></tr>
+  <tr><td><strong>RoomDatabase</strong></td><td>La clase que representa <strong>la base entera</strong>: qué tablas tiene, qué versión es, y da acceso a los DAO.</td></tr>
+  <tr><td><strong>Clave primaria (PK)</strong></td><td>La columna que identifica cada fila sin repetirse (acá, <code>id</code>).</td></tr>
+  <tr><td><strong>Clave foránea (FK)</strong></td><td>Una columna que apunta a la PK de otra tabla (una nota “pertenece” a una categoría).</td></tr>
+  <tr><td><strong>Índice</strong></td><td>Estructura extra que acelera buscar u ordenar por una columna, y puede impedir repetidos (índice único).</td></tr>
+  <tr><td><strong>Esquema</strong></td><td>La “forma” de la base: qué tablas y columnas tiene. Si cambia, hay que <strong>migrar</strong>.</td></tr>
+  <tr><td><strong>Migración</strong></td><td>Instrucciones para pasar una base instalada de una versión del esquema a la siguiente <strong>sin perder datos</strong>.</td></tr>
+  <tr><td><strong>Transacción</strong></td><td>Grupo de operaciones que se hacen todas o ninguna.</td></tr>
+  <tr><td><strong>KSP</strong></td><td>Herramienta que, al compilar, lee las anotaciones de Room y genera el código. Si el SQL está mal, <strong>no compila</strong>.</td></tr>
+  <tr><td><strong>suspend / corrutina</strong></td><td>Las operaciones de base pueden tardar: se marcan <code>suspend</code> y se llaman desde una corrutina, sin congelar la pantalla.</td></tr>
+  <tr><td><strong>Flow</strong></td><td>Un “canal” de valores. Un DAO que devuelve <code>Flow</code> vuelve a emitir la lista cada vez que la tabla cambia.</td></tr>
+  <tr><td><strong>Database Inspector</strong></td><td>Herramienta de Android Studio (App Inspection) para ver y editar la base de la app mientras corre en debug.</td></tr>
+</table>
+
+<h2 class="salto">Organización del proyecto en carpetas</h2>
+<p>El código se organiza por capas, como en el proyecto de MVVM (y el repositorio de referencia <em>PokedexAcademy-MVVM-Clean</em>).
+En cada rama aparecen solo las carpetas de ese ejercicio.</p>
+<pre>app/src/main/java/com/example/ejercicioskotlinroom/
+ ├── MainActivity.kt          # punto de entrada
+ ├── NotasApp.kt              # Application: crea la ÚNICA instancia de la base (desde el Ej 4)
+ ├── core/theme/              # tema de Compose
+ ├── data/
+ │    ├── local/              # AppDatabase, Converters, Migrations
+ │    │    ├── entity/        # tablas (@Entity) y resultados de relaciones
+ │    │    └── dao/           # operaciones (@Dao)
+ │    └── repository/         # Repository: la API de datos que ve el ViewModel (desde el Ej 9)
+ ├── domain/model/            # enums del dominio (Prioridad, EstadoPrestamo)
+ └── presentation/            # una carpeta por pantalla (pantalla + ViewModel)
+
+app/src/androidTest/java/com/example/ejercicioskotlinroom/
+ └── data/local/              # tests de DAO, converters y migraciones (corren en el emulador)
+app/schemas/                  # JSON del esquema de cada versión (exportSchema = true)</pre>
+<div class="caja ojo">
+  <strong class="titulo">Diferencia con el proyecto MVVM</strong>
+  Siguiendo la guía de Room, la pantalla y el ViewModel trabajan directamente con las <code>Entity</code> (<code>NotaEntity</code>):
+  no hay un modelo de dominio aparte ni casos de uso. Por eso <code>domain/</code> solo tiene los enums. Los tests de Room van en
+  <code>androidTest</code> (necesitan Android para abrir SQLite) y se corren con <code>./gradlew :app:connectedDebugAndroidTest</code>.
+</div>
+
+<h2 class="salto">Ejercicio 1 — ¿Qué se pierde cuando la app se cierra?</h2>
+<p><strong>Consigna:</strong> Lista editable en Compose <strong>sin Room</strong>. Agregar ítems y probar: rotar, volver atrás, cerrar desde recientes y matar el proceso. Registrar qué sobrevive. Tabla “dato / dónde vive / dónde debería vivir”.<br>Rama: <code>ej01-estado-en-memoria</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Antes de usar una base de datos hay que ver <strong>el problema</strong>: lo que vive en memoria se pierde. La pantalla tiene la misma lista dos veces, una con <code>remember</code> y otra con <code>rememberSaveable</code>, para comparar qué sobrevive a cada situación.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong><code>remember</code> no guarda nada en disco:</strong> solo evita que el valor se pierda cuando Compose redibuja. Al rotar, se pierde.</li><li><strong><code>rememberSaveable</code></strong> sobrevive a la rotación (Android lo guarda en un “paquetito” de estado), pero no a que el usuario cierre la app.</li><li><strong>Ninguno de los dos es una base de datos.</strong> Para que algo dure “para siempre” hay que escribirlo en un archivo: eso hace Room.</li><li><strong>No todo merece guardarse:</strong> el texto a medio escribir o si un diálogo está abierto son del momento; las notas del usuario sí.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<div class="figs"><figure><img src="img/ej01_antes.png" style="height:250px"><br>Antes de rotar: 2 ítems en cada lista</figure><figure><img src="img/ej01_rotado.png" style="height:250px"><br>Después de rotar: <strong>la de remember quedó vacía</strong></figure></div>
+<table><tr><th>Caso</th><th>remember</th><th>rememberSaveable</th></tr>
+<tr><td>1) Rotar</td><td>❌ se pierde (probado)</td><td>✅ sobrevive (probado)</td></tr>
+<tr><td>2) Volver atrás y entrar</td><td>❌</td><td>❌ la Activity se destruye del todo</td></tr>
+<tr><td>3) Cerrar desde recientes</td><td>❌</td><td>❌</td></tr>
+<tr><td>4) Matar el proceso desde Android Studio</td><td>❌</td><td>❌</td></tr></table>
+<table><tr><th>Dato</th><th>Dónde vive ahora</th><th>Dónde debería vivir</th></tr>
+<tr><td>Texto del TextField (borrador)</td><td>remember</td><td>rememberSaveable (es efímero)</td></tr>
+<tr><td>Lista de elementos</td><td>remember / rememberSaveable</td><td><strong>Room</strong>: es información del usuario</td></tr>
+<tr><td>Preferencia visual (fondo oscuro)</td><td>remember</td><td>DataStore (preferencia chica, no una tabla)</td></tr></table>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿remember implica persistencia?</strong><br>No. Solo conserva el valor mientras la composición vive; si la Activity se destruye, se pierde.</p>
+<p><strong>2. ¿Diferencia entre conservar estado ante recomposición y conservar datos al reiniciar el proceso?</strong><br>Recomponer es Compose volviendo a ejecutar la función con el proceso vivo: alcanza <code>remember</code>. Reiniciar el proceso borra toda la memoria: solo sobrevive lo que está en disco (archivo, DataStore, Room).</p>
+<p><strong>3. ¿Todos los datos de una pantalla deberían guardarse en una base?</strong><br>No. Lo que importa al usuario y debe durar (notas) va a la base; lo del momento (borrador, diálogo abierto, scroll) es estado de UI.</p>
+<p><strong>4. ¿Qué dato sería absurdo persistir?</strong><br>El “estoy escribiendo” del TextField a medio tipear o un flag de diálogo abierto: no sirven al día siguiente y ensucian la base.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Caso que se conserva (rememberSaveable al rotar) y caso que se pierde (remember al rotar, ambos al cerrar) documentados. Room resuelve otro problema: guardar en disco para que los datos sobrevivan a todo.</div>
+
+
+</body>
+</html>
