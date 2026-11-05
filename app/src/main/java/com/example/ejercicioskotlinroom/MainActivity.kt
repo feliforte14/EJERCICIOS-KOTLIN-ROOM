@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import com.example.ejercicioskotlinroom.ui.theme.EjerciciosKotlinRoomTheme
+import com.example.ejercicioskotlinroom.core.theme.EjerciciosKotlinRoomTheme
+import com.example.ejercicioskotlinroom.presentation.memoria.PantallaEstadoEnMemoria
 
 // Proyecto base de la guía de Room. Cada ejercicio vive en su propia rama (ver README.md).
 class MainActivity : ComponentActivity() {
