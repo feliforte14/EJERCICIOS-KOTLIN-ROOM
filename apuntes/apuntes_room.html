@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Apuntes Room – DA1</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root { --azul:#1d3a8a; --azul-claro:#eef2fb; --verde:#1f6b3a; --verde-claro:#eef7f0;
+          --ambar:#7a5a00; --ambar-claro:#fff8e1; --gris:#555; --borde:#cfd6e4; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 10.5pt;
+         line-height: 1.45; color: #1a1a1a; background:#fff; margin:0; }
+  header.portada { border-bottom: 3px solid var(--azul); padding-bottom: 10px; margin-bottom: 18px; }
+  header.portada h1 { margin:0; font-size: 20pt; color: var(--azul); }
+  header.portada p { margin: 4px 0 0; color: var(--gris); }
+  h2 { font-size: 15pt; color: var(--azul); margin: 22px 0 6px; border-bottom: 1px solid var(--borde); padding-bottom: 4px; }
+  h3 { font-size: 11.5pt; margin: 16px 0 6px; }
+  p { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 9.8pt; page-break-inside: avoid; }
+  th, td { border: 1px solid var(--borde); padding: 5px 7px; vertical-align: top; text-align: left; }
+  th { background: var(--azul-claro); }
+  code { font-family: "SF Mono", Menlo, monospace; font-size: 9pt; background: #f2f4f8; padding: 0 3px; border-radius: 3px; }
+  pre { font-family: "SF Mono", Menlo, monospace; font-size: 8.4pt; background: #f6f7fa; border: 1px solid var(--borde);
+        border-radius: 6px; padding: 9px 11px; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; page-break-inside: avoid; margin: 8px 0; }
+  .caja { border-radius: 6px; padding: 8px 12px; margin: 10px 0; page-break-inside: avoid; }
+  .clave { background: var(--azul-claro); border-left: 4px solid var(--azul); }
+  .regla { background: var(--verde-claro); border-left: 4px solid var(--verde); }
+  .ojo { background: var(--ambar-claro); border-left: 4px solid var(--ambar); }
+  .caja strong.titulo { display:block; margin-bottom: 3px; }
+  .tag { display:inline-block; padding: 0 6px; border-radius: 10px; font-size: 8.8pt; font-weight: 600; }
+  .v { background:#e3ecff; color:#1d3a8a; } .vm { background:#e5f5ea; color:#1f6b3a; } .r { background:#fff0d6; color:#7a5a00; }
+  ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+  .salto { page-break-before: always; }
+  .figs { display:flex; gap:10px; align-items:flex-end; justify-content:center; margin:10px 0; break-inside: avoid; }
+  .figs figure { margin:0; flex:0 0 auto; text-align:center; font-size:8.6pt; color:var(--gris); }
+  .figs img { border:1px solid var(--borde); border-radius:6px; display:block; margin:0 auto 4px; }
+  
+  .pocas { background:#f3f0ff; border-left:4px solid #5b3fb8; }
+  .novato { background:#fff4ec; border-left:4px solid #c2561a; }
+  .novato ul { margin-bottom:0; }
+  .novato li { margin:4px 0; }
+  .bloque { break-inside: avoid; page-break-inside: avoid; }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+</style>
+</head>
+<body>
+<header class="portada">
+  <h1>Apuntes – Persistencia local con Room</h1>
+  <p>Desarrollo de Aplicaciones I · UADE · Guía de Ejercicios: Persistencia local con Room (v1.0)</p>
+  <p>Proyecto: <code>EJERCICIOS-KOTLIN-ROOM</code> · Felipe Forte · Kotlin + Jetpack Compose + Room 2.8.5 (KSP)</p>
+</header>
+<p>Cómo leer estos apuntes: cada ejercicio tiene un recuadro <strong>“En pocas palabras”</strong> (qué se hace y por qué), uno de
+<strong>“Aclaraciones para novatos”</strong> (lo que suele confundir), la <strong>explicación con el código real</strong> del proyecto, las
+<strong>pruebas hechas en el emulador</strong> (con capturas y consultas a la base) y las <strong>respuestas a las preguntas de la guía</strong>.
+Todas las consultas a la base se hicieron copiando el archivo SQLite del emulador y consultándolo con <code>sqlite3</code>: muestran lo que
+realmente quedó guardado.</p>
+
+<h2 class="salto">Glosario para empezar</h2>
+<table>
+  <tr><th style="width:24%">Término</th><th>Qué significa, en simple</th></tr>
+  <tr><td><strong>Persistir</strong></td><td>Guardar un dato de forma que sobreviva a cerrar la app, matar el proceso o reiniciar el teléfono.</td></tr>
+  <tr><td><strong>SQLite</strong></td><td>El motor de base de datos que viene en Android. Guarda todo en <strong>un archivo</strong> dentro de la app (por ejemplo <code>notas.db</code>).</td></tr>
+  <tr><td><strong>Tabla / fila / columna</strong></td><td>Una tabla es como una planilla: cada <em>fila</em> es un registro (una nota) y cada <em>columna</em> un dato (título, fecha).</td></tr>
+  <tr><td><strong>SQL</strong></td><td>El idioma para hablarle a la base: <code>SELECT</code> (leer), <code>INSERT</code> (agregar), <code>UPDATE</code> (modificar), <code>DELETE</code> (borrar).</td></tr>
+  <tr><td><strong>Room</strong></td><td>Biblioteca de Android que se pone encima de SQLite: uno escribe clases de Kotlin con anotaciones y Room genera el código que habla con SQLite.</td></tr>
+  <tr><td><strong>Entity</strong></td><td>Una <code>data class</code> con <code>@Entity</code>: describe <strong>una tabla</strong>. Cada objeto = una fila.</td></tr>
+  <tr><td><strong>DAO</strong></td><td>Interface con <code>@Dao</code>: lista las <strong>operaciones</strong> sobre la tabla (insertar, buscar, borrar). Room escribe la implementación.</td></tr>
+  <tr><td><strong>RoomDatabase</strong></td><td>La clase que representa <strong>la base entera</strong>: qué tablas tiene, qué versión es, y da acceso a los DAO.</td></tr>
+  <tr><td><strong>Clave primaria (PK)</strong></td><td>La columna que identifica cada fila sin repetirse (acá, <code>id</code>).</td></tr>
+  <tr><td><strong>Clave foránea (FK)</strong></td><td>Una columna que apunta a la PK de otra tabla (una nota “pertenece” a una categoría).</td></tr>
+  <tr><td><strong>Índice</strong></td><td>Estructura extra que acelera buscar u ordenar por una columna, y puede impedir repetidos (índice único).</td></tr>
+  <tr><td><strong>Esquema</strong></td><td>La “forma” de la base: qué tablas y columnas tiene. Si cambia, hay que <strong>migrar</strong>.</td></tr>
+  <tr><td><strong>Migración</strong></td><td>Instrucciones para pasar una base instalada de una versión del esquema a la siguiente <strong>sin perder datos</strong>.</td></tr>
+  <tr><td><strong>Transacción</strong></td><td>Grupo de operaciones que se hacen todas o ninguna.</td></tr>
+  <tr><td><strong>KSP</strong></td><td>Herramienta que, al compilar, lee las anotaciones de Room y genera el código. Si el SQL está mal, <strong>no compila</strong>.</td></tr>
+  <tr><td><strong>suspend / corrutina</strong></td><td>Las operaciones de base pueden tardar: se marcan <code>suspend</code> y se llaman desde una corrutina, sin congelar la pantalla.</td></tr>
+  <tr><td><strong>Flow</strong></td><td>Un “canal” de valores. Un DAO que devuelve <code>Flow</code> vuelve a emitir la lista cada vez que la tabla cambia.</td></tr>
+  <tr><td><strong>Database Inspector</strong></td><td>Herramienta de Android Studio (App Inspection) para ver y editar la base de la app mientras corre en debug.</td></tr>
+</table>
+
+<h2 class="salto">Organización del proyecto en carpetas</h2>
+<p>El código se organiza por capas, como en el proyecto de MVVM (y el repositorio de referencia <em>PokedexAcademy-MVVM-Clean</em>).
+En cada rama aparecen solo las carpetas de ese ejercicio.</p>
+<pre>app/src/main/java/com/example/ejercicioskotlinroom/
+ ├── MainActivity.kt          # punto de entrada
+ ├── NotasApp.kt              # Application: crea la ÚNICA instancia de la base (desde el Ej 4)
+ ├── core/theme/              # tema de Compose
+ ├── data/
+ │    ├── local/              # AppDatabase, Converters, Migrations
+ │    │    ├── entity/        # tablas (@Entity) y resultados de relaciones
+ │    │    └── dao/           # operaciones (@Dao)
+ │    └── repository/         # Repository: la API de datos que ve el ViewModel (desde el Ej 9)
+ ├── domain/model/            # enums del dominio (Prioridad, EstadoPrestamo)
+ └── presentation/            # una carpeta por pantalla (pantalla + ViewModel)
+
+app/src/androidTest/java/com/example/ejercicioskotlinroom/
+ └── data/local/              # tests de DAO, converters y migraciones (corren en el emulador)
+app/schemas/                  # JSON del esquema de cada versión (exportSchema = true)</pre>
+<div class="caja ojo">
+  <strong class="titulo">Diferencia con el proyecto MVVM</strong>
+  Siguiendo la guía de Room, la pantalla y el ViewModel trabajan directamente con las <code>Entity</code> (<code>NotaEntity</code>):
+  no hay un modelo de dominio aparte ni casos de uso. Por eso <code>domain/</code> solo tiene los enums. Los tests de Room van en
+  <code>androidTest</code> (necesitan Android para abrir SQLite) y se corren con <code>./gradlew :app:connectedDebugAndroidTest</code>.
+</div>
+
+<h2 class="salto">Ejercicio 1 — ¿Qué se pierde cuando la app se cierra?</h2>
+<p><strong>Consigna:</strong> Lista editable en Compose <strong>sin Room</strong>. Agregar ítems y probar: rotar, volver atrás, cerrar desde recientes y matar el proceso. Registrar qué sobrevive. Tabla “dato / dónde vive / dónde debería vivir”.<br>Rama: <code>ej01-estado-en-memoria</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Antes de usar una base de datos hay que ver <strong>el problema</strong>: lo que vive en memoria se pierde. La pantalla tiene la misma lista dos veces, una con <code>remember</code> y otra con <code>rememberSaveable</code>, para comparar qué sobrevive a cada situación.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong><code>remember</code> no guarda nada en disco:</strong> solo evita que el valor se pierda cuando Compose redibuja. Al rotar, se pierde.</li><li><strong><code>rememberSaveable</code></strong> sobrevive a la rotación (Android lo guarda en un “paquetito” de estado), pero no a que el usuario cierre la app.</li><li><strong>Ninguno de los dos es una base de datos.</strong> Para que algo dure “para siempre” hay que escribirlo en un archivo: eso hace Room.</li><li><strong>No todo merece guardarse:</strong> el texto a medio escribir o si un diálogo está abierto son del momento; las notas del usuario sí.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<div class="figs"><figure><img src="img/ej01_antes.png" style="height:250px"><br>Antes de rotar: 2 ítems en cada lista</figure><figure><img src="img/ej01_rotado.png" style="height:250px"><br>Después de rotar: <strong>la de remember quedó vacía</strong></figure></div>
+<table><tr><th>Caso</th><th>remember</th><th>rememberSaveable</th></tr>
+<tr><td>1) Rotar</td><td>❌ se pierde (probado)</td><td>✅ sobrevive (probado)</td></tr>
+<tr><td>2) Volver atrás y entrar</td><td>❌</td><td>❌ la Activity se destruye del todo</td></tr>
+<tr><td>3) Cerrar desde recientes</td><td>❌</td><td>❌</td></tr>
+<tr><td>4) Matar el proceso desde Android Studio</td><td>❌</td><td>❌</td></tr></table>
+<table><tr><th>Dato</th><th>Dónde vive ahora</th><th>Dónde debería vivir</th></tr>
+<tr><td>Texto del TextField (borrador)</td><td>remember</td><td>rememberSaveable (es efímero)</td></tr>
+<tr><td>Lista de elementos</td><td>remember / rememberSaveable</td><td><strong>Room</strong>: es información del usuario</td></tr>
+<tr><td>Preferencia visual (fondo oscuro)</td><td>remember</td><td>DataStore (preferencia chica, no una tabla)</td></tr></table>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿remember implica persistencia?</strong><br>No. Solo conserva el valor mientras la composición vive; si la Activity se destruye, se pierde.</p>
+<p><strong>2. ¿Diferencia entre conservar estado ante recomposición y conservar datos al reiniciar el proceso?</strong><br>Recomponer es Compose volviendo a ejecutar la función con el proceso vivo: alcanza <code>remember</code>. Reiniciar el proceso borra toda la memoria: solo sobrevive lo que está en disco (archivo, DataStore, Room).</p>
+<p><strong>3. ¿Todos los datos de una pantalla deberían guardarse en una base?</strong><br>No. Lo que importa al usuario y debe durar (notas) va a la base; lo del momento (borrador, diálogo abierto, scroll) es estado de UI.</p>
+<p><strong>4. ¿Qué dato sería absurdo persistir?</strong><br>El “estoy escribiendo” del TextField a medio tipear o un flag de diálogo abierto: no sirven al día siguiente y ensucian la base.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Caso que se conserva (rememberSaveable al rotar) y caso que se pierde (remember al rotar, ambos al cerrar) documentados. Room resuelve otro problema: guardar en disco para que los datos sobrevivan a todo.</div>
+
+<h2 class="salto">Ejercicio 2 — Primera Entity: decidir qué se guarda</h2>
+<p><strong>Consigna:</strong> Crear <code>NotaEntity</code> revisando campo por campo, agregar una columna propia y describir la tabla resultante.<br>Rama: <code>ej02-entity</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Se define <strong>cómo es una fila</strong> de la tabla <code>notas</code> con una <code>data class</code>. Todavía no se guarda nada: es el “molde”. Se agregó la columna <code>colorEtiqueta</code>.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>Una instancia de <code>NotaEntity</code> = una fila.</strong> Cada propiedad = una columna.</li><li><strong><code>id = 0</code> no significa que todas las notas tengan id 0:</strong> con <code>autoGenerate</code>, el 0 quiere decir “todavía no tiene”; SQLite asigna 1, 2, 3…</li><li><strong>SQLite no tiene Boolean:</strong> Room guarda <code>true/false</code> como 1/0.</li><li><strong>Guardar datos crudos, no formateados:</strong> la fecha va como número (<code>Long</code>) para poder ordenar; el “hace 5 minutos” se arma al mostrar.</li><li><strong>Cambiar el nombre de una propiedad cambia el nombre de la columna</strong> y obliga a migrar una base ya instalada (Ej 14).</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Entity(tableName = "notas")
+data class NotaEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+    val titulo: String,
+    val contenido: String,
+    val importante: Boolean = false,
+    val creadaEn: Long,                       // milisegundos desde 1970
+    val colorEtiqueta: String = "NINGUNO"     // columna agregada
+)</pre>
+<table><tr><th>Columna</th><th>Tipo SQLite</th><th>Notas</th></tr>
+<tr><td>id</td><td>INTEGER PK AUTOINCREMENT</td><td>identifica la fila</td></tr>
+<tr><td>titulo, contenido</td><td>TEXT NOT NULL</td><td>lo que escribe el usuario</td></tr>
+<tr><td>importante</td><td>INTEGER NOT NULL</td><td>0 / 1</td></tr>
+<tr><td>creadaEn</td><td>INTEGER NOT NULL</td><td>para ordenar por fecha</td></tr>
+<tr><td>colorEtiqueta</td><td>TEXT NOT NULL</td><td>propia: “NINGUNO”, “ROJO”…</td></tr></table>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Por qué id puede empezar en 0?</strong><br>Con <code>autoGenerate</code> el 0 es un centinela (“sin id todavía”); al insertar, SQLite asigna el siguiente.</p>
+<p><strong>2. ¿Qué parte existe para Room y qué parte es del problema?</strong><br>Para Room: <code>@Entity</code>, <code>@PrimaryKey</code>, <code>tableName</code>, el id autogenerado. Del problema: título, contenido, importante, fecha, color.</p>
+<p><strong>3. ¿Guardarías un Painter, un Modifier o un texto formateado?</strong><br>No: Painter y Modifier son objetos de la UI sin sentido fuera del proceso; un texto formateado impide ordenar y reformatear.</p>
+<p><strong>4. ¿Cambiar el nombre de una propiedad puede afectar una base instalada?</strong><br>Sí: cambia el esquema. Hay que subir la versión y migrar, o fijar el nombre con <code>@ColumnInfo(name = ...)</code>.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Compila con una <code>@Entity</code> válida y PK clara; la explicación de qué representa una fila está en el código.</div>
+
+<h2 class="salto">Ejercicio 3 — DAO: escribir y preguntar a la base</h2>
+<p><strong>Consigna:</strong> Crear <code>NotaDao</code>: insertar, listar todas, borrar todas, más una consulta por id y otra de importantes. Desafío: contar sin cargar filas.<br>Rama: <code>ej03-dao</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>El DAO es la <strong>lista de cosas que se le pueden pedir a la tabla</strong>. Uno escribe la firma y el SQL; Room genera el código. Todavía no se conecta a la pantalla.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>El DAO es una <code>interface</code></strong>: no se implementa a mano. KSP genera la clase al compilar.</li><li><strong><code>@Query</code> lleva SQL dentro de un String</strong>, y Room lo verifica: si una columna no existe, el proyecto no compila.</li><li><strong><code>insertar</code> devuelve un <code>Long</code>:</strong> el id que le tocó a la fila nueva.</li><li><strong>Buscar por id puede no encontrar nada:</strong> por eso devuelve <code>NotaEntity?</code> (puede ser null).</li><li><strong><code>suspend</code></strong> porque leer o escribir en disco puede tardar; Room no deja hacerlo en el hilo principal.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Dao
+interface NotaDao {
+    @Insert suspend fun insertar(nota: NotaEntity): Long
+    @Query("SELECT * FROM notas ORDER BY creadaEn DESC")
+    suspend fun obtenerTodasUnaVez(): List&lt;NotaEntity&gt;
+    @Query("DELETE FROM notas") suspend fun borrarTodas()
+    @Query("SELECT * FROM notas WHERE id = :id LIMIT 1")
+    suspend fun obtenerPorId(id: Int): NotaEntity?            // propia
+    @Query("SELECT * FROM notas WHERE importante = 1 ORDER BY creadaEn DESC")
+    suspend fun obtenerImportantes(): List&lt;NotaEntity&gt;        // propia
+    @Query("SELECT COUNT(*) FROM notas")
+    suspend fun contarNotas(): Int                            // desafío
+}</pre>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Qué interpreta Room y qué SQLite?</strong><br>Room: las anotaciones y la firma (genera código, convierte Entity ⇄ fila, valida el SQL al compilar). SQLite: el texto SQL, que ejecuta contra el archivo.</p>
+<p><strong>2. ¿Por qué insertar() devuelve Long?</strong><br>Devuelve el rowId de la fila insertada, que con PK autogenerada es el id nuevo.</p>
+<p><strong>3. ¿Y si la consulta por id no encuentra nada?</strong><br>No hay fila: el retorno razonable es nullable (<code>NotaEntity?</code>) y null significa “no existe”.</p>
+<p><strong>4. ¿Por qué no bloquear el hilo principal?</strong><br>Disco puede tardar: congelaría la UI (ANR). Son <code>suspend</code> y Room usa su propio hilo de IO.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ 6 operaciones útiles, todas sobre columnas que existen en <code>NotaEntity</code> (si no, no compilaría).</div>
+
+<h2 class="salto">Ejercicio 4 — Crear la base y mirarla por dentro</h2>
+<p><strong>Consigna:</strong> Crear <code>AppDatabase</code>, construir <strong>una única instancia</strong> para la app, insertar al menos tres notas y verlas en Database Inspector.<br>Rama: <code>ej04-database</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Se crea la base real (<code>notas.db</code>) y se la deja en la clase <code>Application</code>, que vive mientras vive la app. Una pantalla de prueba inserta 3 notas y las lee.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong><code>AppDatabase</code> define; <code>Room.databaseBuilder(...).build()</code> abre.</strong> La primera es la descripción; la segunda crea/abre el archivo.</li><li><strong>Una sola instancia:</strong> crear la base en cada recomposición abriría conexiones sin parar y los Flow de una no verían lo que escribe otra.</li><li><strong><code>by lazy</code></strong> crea la base recién la primera vez que se usa, y una sola vez.</li><li><strong><code>version = 1</code></strong> es la versión del esquema: se guarda dentro del archivo y sirve para saber cuándo migrar.</li><li><strong>Database Inspector no viaja en la app:</strong> es una herramienta de Android Studio para debug.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Database(entities = [NotaEntity::class], version = 1, exportSchema = true)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun notaDao(): NotaDao
+}
+
+class NotasApp : Application() {                 // registrada en el Manifest
+    val database: AppDatabase by lazy {
+        Room.databaseBuilder(applicationContext, AppDatabase::class.java, "notas.db").build()
+    }
+}</pre><div class="figs"><figure><img src="img/ej04.png" style="height:240px"><br>Pantalla de prueba: “Insertar 3 notas” y “Leer de la base”</figure></div>
+<p>Consulta al archivo real copiado del emulador:</p><pre>sqlite&gt; SELECT name FROM sqlite_master WHERE type='table';
+android_metadata | notas | sqlite_sequence | room_master_table
+sqlite&gt; PRAGMA user_version;          -&gt; 1
+sqlite&gt; SELECT id, titulo, importante, colorEtiqueta FROM notas;
+ 1  Comprar pan       0  NINGUNO
+ 2  Estudiar Room     1  NINGUNO
+ 3  Llamar al banco   0  ROJO</pre>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Qué representa version = 1?</strong><br>La versión del esquema, guardada en el archivo (<code>PRAGMA user_version</code>). Al cambiar el esquema se sube y se migra.</p>
+<p><strong>2. ¿Relación entre AppDatabase, el archivo SQLite y el DAO?</strong><br>Archivo = los datos; AppDatabase = la puerta de entrada que conoce el esquema; DAO = las operaciones que se obtienen de ella.</p>
+<p><strong>3. ¿Por qué una única instancia?</strong><br>Es cara, cada una abre su conexión, y la invalidación de los Flow es por instancia.</p>
+<p><strong>4. ¿Database Inspector es parte de la app final?</strong><br>No: es de Android Studio, no se empaqueta en el APK.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ La tabla tiene 3 filas reales (comprobado arriba). Esquema: <code>data/local/AppDatabase.kt</code>; apertura física: <code>NotasApp.kt</code>.</div>
+
+<h2 class="salto">Ejercicio 5 — Alta de datos desde Compose</h2>
+<p><strong>Consigna:</strong> Formulario con título, contenido, importante, Guardar y mensaje. Insertar fuera del hilo principal. Validar: título no vacío, recortar espacios, evitar duplicados por doble toque.<br>Rama: <code>ej05-alta-compose</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Primera pantalla conectada a Room: el usuario escribe una nota y se inserta en la tabla. Se valida antes de guardar y se muestra el resultado.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong><code>trim()</code></strong> saca los espacios de los extremos: “  Hola ” queda “Hola”.</li><li><strong><code>creadaEn</code> lo pone el código</strong> (<code>System.currentTimeMillis()</code>) justo antes de insertar: no es un campo del formulario.</li><li><strong>Doble toque:</strong> mientras se guarda, el botón se deshabilita (<code>guardando = true</code>). Sin eso, dos toques rápidos crean dos filas iguales.</li><li><strong><code>rememberCoroutineScope()</code></strong> da corrutinas atadas a la pantalla; se cancelan si la pantalla desaparece. Más adelante el lugar correcto es el ViewModel.</li><li><strong>“Silenciosamente” es lo prohibido:</strong> si el título está vacío no se guarda <em>y se avisa</em>.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<div class="figs"><figure><img src="img/ej05.png" style="height:250px"><br>Título vacío → “El título no puede estar vacío”;<br>las 2 notas válidas quedaron guardadas</figure></div><pre>sqlite&gt; SELECT id, titulo, contenido FROM notas;
+ 1  Comprar yerba   Para la semana
+ 2  Estudiar Room   Entity DAO Database      (el intento con título vacío no está)</pre>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Qué dato de la UI no debería terminar en la tabla?</strong><br>El estado de la pantalla: texto a medio escribir, el mensaje “Guardada”, el flag <code>guardando</code>.</p>
+<p><strong>2. ¿Dónde se genera creadaEn y por qué?</strong><br>Al guardar, con <code>System.currentTimeMillis()</code>: tiene que ser el momento real del guardado.</p>
+<p><strong>3. ¿Qué señal indica que la inserción terminó bien?</strong><br>El <code>Long</code> que devuelve <code>insertar()</code>: un id &gt; 0. Se muestra en el mensaje.</p>
+<p><strong>4. ¿Riesgo de lanzar corrutinas en cualquier lado?</strong><br>Que sigan vivas con la pantalla muerta o se lancen varias veces (duplicados). Hay que usar un scope atado al ciclo de vida.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Se cargan notas desde la UI y siguen al reiniciar; un título inválido no se inserta y se avisa.</div>
+
+<h2 class="salto">Ejercicio 6 — Leer con Flow y dejar que la pantalla reaccione</h2>
+<p><strong>Consigna:</strong> El DAO expone <code>Flow&lt;List&lt;NotaEntity&gt;&gt;</code>; la pantalla lo muestra en una <code>LazyColumn</code> que se actualiza sola. Desafío: estado vacío sin lista paralela.<br>Rama: <code>ej06-flow</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>En vez de pedir la lista una vez, la pantalla se <strong>suscribe</strong>: cada vez que la tabla cambia, Room vuelve a ejecutar la consulta y la lista se redibuja sola. Ya no hace falta un botón “Recargar”.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong><code>List</code> es una foto; <code>Flow</code> es una película:</strong> la foto no se entera de cambios, la película sí.</li><li><strong>Una función que devuelve <code>Flow</code> no lleva <code>suspend</code>:</strong> no espera un resultado, devuelve un canal al que uno se suscribe.</li><li><strong><code>collectAsStateWithLifecycle()</code></strong> convierte el Flow en algo que Compose observa, y deja de escuchar en segundo plano.</li><li><strong>Estado vacío sin inventar nada:</strong> “Todavía no hay notas” sale de <code>notas.isEmpty()</code>, la misma lista.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Query("SELECT * FROM notas ORDER BY creadaEn DESC")
+fun observarNotas(): Flow&lt;List&lt;NotaEntity&gt;&gt;
+
+// en la pantalla
+val notas by dao.observarNotas().collectAsStateWithLifecycle(initialValue = emptyList())
+if (notas.isEmpty()) Text("Todavía no hay notas")
+LazyColumn { items(notas, key = { it.id }) { ... } }</pre><div class="figs"><figure><img src="img/ej06_vacio.png" style="height:230px"><br>Base vacía: estado vacío</figure><figure><img src="img/ej06_lista.png" style="height:230px"><br>Después de Guardar: aparece sola</figure></div><p><strong>Cadena completa:</strong> la tabla cambia → Room invalida el Flow → emite la lista nueva → <code>collectAsStateWithLifecycle</code> actualiza el State → la <code>LazyColumn</code> se recompone.</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Diferencia entre Flow&lt;List&gt; y List?</strong><br>List es el resultado de un momento; Flow emite una lista nueva cada vez que la tabla cambia.</p>
+<p><strong>2. ¿Room vuelve a ejecutar la consulta?</strong><br>Sí, mientras alguien recolecte el Flow, cada vez que se invalida una tabla que la consulta lee.</p>
+<p><strong>3. ¿Es lo mismo un Flow que un estado de Compose?</strong><br>No: Flow es de corrutinas; el State de Compose avisa que hay que recomponer. collectAsState… los conecta.</p>
+<p><strong>4. ¿Qué hace collectAsStateWithLifecycle?</strong><br>Recolecta, guarda el último valor en un State, dispara recomposición y pausa en segundo plano.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ La lista reacciona a inserciones sin recarga manual (probado).</div>
+
+<h2 class="salto">Ejercicio 7 — CRUD completo: editar y eliminar</h2>
+<p><strong>Consigna:</strong> Agregar <code>@Update</code> y <code>@Delete</code>; editar una nota existente y eliminar con confirmación. Comprobar que editar no crea otra fila. Desafío: Deshacer.<br>Rama: <code>ej07-crud</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Se completa el <strong>CRUD</strong> (Crear, Leer, Actualizar, Borrar). Editar modifica la <strong>misma fila</strong> (mismo id); borrar pide confirmación y ofrece “Deshacer”.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong><code>@Update</code> busca la fila por la clave primaria</strong> del objeto: por eso se edita con <code>nota.copy(titulo = ...)</code>, que conserva el id.</li><li><strong>Si se arma una Entity nueva con id 0 y se manda a <code>@Update</code>, no actualiza nada</strong> (no existe la fila 0).</li><li><strong>Deshacer</strong> guarda en memoria la nota borrada (con su id) y la vuelve a insertar: reaparece igual.</li><li><strong>Ese “Deshacer” no es persistente:</strong> si se cierra la app antes de tocarlo, la nota se pierde.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Update suspend fun actualizar(nota: NotaEntity): Int   // filas modificadas
+@Delete suspend fun eliminar(nota: NotaEntity): Int
+
+dao.actualizar(nota.copy(titulo = nuevoTitulo))       // mismo id → misma fila</pre><div class="figs"><figure><img src="img/ej07_editar.png" style="height:220px"><br>Editar: diálogo</figure><figure><img src="img/ej07_confirmar.png" style="height:220px"><br>Borrar: confirmación</figure><figure><img src="img/ej07_deshacer.png" style="height:220px"><br>Borrada: Snackbar “Deshacer”</figure></div><pre>Editar "Primera nota" → id sigue siendo 1, sigue habiendo 1 fila
+Borrar → SELECT count(*) = 0 ;  Deshacer → vuelve "1 | Primera nota editada"</pre>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Cómo sabe @Update qué fila modificar?</strong><br>Por la PK del objeto: <code>UPDATE notas SET … WHERE id = :id</code>.</p>
+<p><strong>2. ¿Y si el objeto editado tiene otro id?</strong><br>Pisaría otra fila; con un id inexistente no modifica nada (devuelve 0).</p>
+<p><strong>3. ¿Borrar directo o pedir confirmación?</strong><br>Confirmar (o deshacer): borrar es destructivo y un toque accidental es fácil. Se hicieron las dos.</p>
+<p><strong>4. ¿Qué podría vivir solo en memoria?</strong><br>Qué nota se edita, si el diálogo está abierto, el borrador y la nota guardada para Deshacer.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Crear, leer, editar y eliminar sobre la misma base; la edición conserva el id (probado con sqlite).</div>
+
+<h2 class="salto">Ejercicio 8 — Consultas que empiezan a parecerse a una app real</h2>
+<p><strong>Consigna:</strong> Buscador por título, solo importantes, orden por fecha y contadores (total e importantes), todo resuelto en SQL.<br>Rama: <code>ej08-consultas</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>La búsqueda, los filtros, el orden y los contadores los hace <strong>SQLite</strong>, no Kotlin. A la app solo llega el resultado.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong><code>LIKE '%' || :texto || '%'</code></strong> significa “contiene el texto”. <code>||</code> une textos en SQL.</li><li><strong><code>:texto</code></strong> es un parámetro: Room lo pasa por separado (no lo pega en el SQL), lo que evita inyección SQL.</li><li><strong><code>COUNT(*)</code></strong> cuenta filas en la base: los contadores no se llevan “a mano”.</li><li><strong>Filtrar en SQL</strong> evita cargar toda la tabla en memoria para tirar la mayoría de las filas.</li><li><strong>Tests del DAO:</strong> desde esta rama hay tests en <code>androidTest</code> que usan una base <em>en memoria</em> descartable.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Query("""
+    SELECT * FROM notas
+    WHERE titulo LIKE '%' || :texto || '%'
+      AND (:soloImportantes = 0 OR importante = 1)
+    ORDER BY CASE WHEN :ascendente = 1 THEN creadaEn END ASC,
+             CASE WHEN :ascendente = 0 THEN creadaEn END DESC
+""")
+fun filtrar(texto: String, soloImportantes: Boolean, ascendente: Boolean): Flow&lt;List&lt;NotaEntity&gt;&gt;
+
+@Query("SELECT COUNT(*) FROM notas") fun observarCantidad(): Flow&lt;Int&gt;</pre><div class="figs"><figure><img src="img/ej08_buscar.png" style="height:240px"><br>Buscar “Room”: 2 de 3</figure><figure><img src="img/ej08_filtro.png" style="height:240px"><br>+ Solo importantes: 1</figure></div><p>Tests instrumentados (<code>NotaDaoTest</code>): <strong>4/4 ✅</strong> en el emulador.</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Ventaja de filtrar en SQL?</strong><br>El motor descarta filas (y puede usar índices); con <code>filter</code> se cargan todas a memoria.</p>
+<p><strong>2. ¿Cómo entra :texto?</strong><br>Como argumento enlazado (bind): Room no concatena el String, evita inyección.</p>
+<p><strong>3. ¿Ordenar en SQL vs en memoria?</strong><br>En SQL ordena el motor (puede usar un índice) y el Flow ya llega ordenado.</p>
+<p><strong>4. ¿Qué consulta se beneficiaría de un índice?</strong><br>El <code>ORDER BY creadaEn</code>. <code>LIKE '%x%'</code> con comodín adelante no usa índices comunes.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Búsqueda y filtro respaldados por consultas del DAO; contadores con <code>COUNT(*)</code>.</div>
+
+<h2 class="salto">Ejercicio 9 — Poner orden: Repository, ViewModel y Room</h2>
+<p><strong>Consigna:</strong> Reorganizar: Compose UI → ViewModel → Repository → DAO → Room. El Repository recibe el DAO por constructor; la UI no llama al DAO. Desafío: interfaz + implementación.<br>Rama: <code>ej09-repository-viewmodel</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>La pantalla deja de hablar con la base. Ahora pide cosas al <strong>ViewModel</strong> (“guardar nota”), que valida y se lo pasa al <strong>Repository</strong>, que es quien usa el DAO. Mismo comportamiento, mejor ordenado.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>El ViewModel guarda el estado y sobrevive a la rotación</strong>; la pantalla solo dibuja y avisa eventos.</li><li><strong>El Repository habla “en idioma de notas”</strong> (agregar, observar) y esconde que atrás hay SQL.</li><li><strong>La validación (“título vacío”) la decide el ViewModel</strong>, no la pantalla ni el DAO.</li><li><strong><code>flatMapLatest</code></strong>: cuando cambia el texto de búsqueda, deja la consulta anterior y empieza la nueva.</li><li><strong><code>stateIn</code></strong> convierte el Flow en StateFlow con un valor inicial para que la pantalla siempre tenga algo que mostrar.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>IDA:    Guardar → viewModel.guardarNota() → valida → repositorio.agregar() → dao.insertar() → SQLite
+VUELTA: SQLite cambia → Room re-emite el Flow → repositorio.observarNotas() →
+        flatMapLatest + stateIn en el ViewModel → collectAsStateWithLifecycle → LazyColumn
+
+interface NotaRepository { fun observarNotas(...): Flow&lt;List&lt;NotaEntity&gt;&gt;; suspend fun agregar(...) ... }
+class NotaRepositoryImpl(private val notaDao: NotaDao) : NotaRepository { ... }   // recibe el DAO</pre><p>La interfaz está en <code>data/repository/NotaRepository.kt</code> y la implementación en <code>NotaRepositoryImpl.kt</code>. Tests: 4/4 ✅.</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Qué gana y qué cuesta la separación?</strong><br>Gana: la UI no conoce el DAO, cada capa una responsabilidad, estado que sobrevive a la rotación, más fácil de probar. Cuesta: más archivos y métodos que solo delegan.</p>
+<p><strong>2. ¿El Repository tiene que existir siempre?</strong><br>No; si solo reenvía llamadas no aporta. Acá genera <code>creadaEn</code>, arma la entidad y sería el lugar para una fuente remota.</p>
+<p><strong>3. ¿Quién decide si un título vacío es válido?</strong><br>El ViewModel: es una regla de entrada de usuario y arma el mensaje.</p>
+<p><strong>4. Con red y Room, ¿quién coordina?</strong><br>El Repository: Room como fuente de verdad y la red para refrescar.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ La pantalla funciona igual que antes sin tocar el DAO.</div>
+
+<h2 class="salto">Ejercicio 10 — Restricciones, índices y conflictos</h2>
+<p><strong>Consigna:</strong> Agregar <code>codigoExterno</code> que no se repita (índice único), elegir estrategia de conflicto y un índice no único justificado.<br>Rama: <code>ej10-restricciones-indices</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Se le pide a la <strong>base</strong> que proteja una regla: no puede haber dos notas con el mismo código externo. Si se intenta, SQLite lo rechaza y la app avisa.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>Índice único ≠ clave primaria:</strong> la PK identifica la fila; el único solo impide repetidos y admite NULL.</li><li><strong>Varias notas sin código (NULL) no chocan</strong>, pero <code>""</code> sí es un valor: por eso el texto en blanco se convierte en null.</li><li><strong>IGNORE</strong> no inserta y devuelve -1; <strong>ABORT</strong> lanza excepción; <strong>REPLACE</strong> borra la fila vieja y mete la nueva (peligroso).</li><li><strong>Los índices no son gratis:</strong> aceleran lecturas pero ocupan espacio y hacen más lentas las escrituras.</li><li><strong>Ojo en esta rama:</strong> el esquema cambió sin subir la versión (todavía no hay usuarios): hay que borrar los datos de la app antes de probar. Desde el Ej 14, se migra.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Entity(tableName = "notas",
+        indices = [Index(value = ["codigoExterno"], unique = true),
+                   Index(value = ["creadaEn"])])          // todas las consultas ordenan por creadaEn
+
+@Insert(onConflict = OnConflictStrategy.IGNORE)
+suspend fun insertar(nota: NotaEntity): Long            // -1 si viola la restricción</pre><div class="figs"><figure><img src="img/ej10_duplicado.png" style="height:240px"><br>Segundo “FAC-1”: “Ya existe una nota con ese código externo”</figure></div><pre>sqlite&gt; SELECT id, titulo, codigoExterno FROM notas;     -&gt;  1 | Factura luz | FAC-1   (una sola)
+sqlite&gt; índices de notas:
+CREATE UNIQUE INDEX index_notas_codigoExterno ON notas (codigoExterno)
+CREATE INDEX        index_notas_creadaEn      ON notas (creadaEn)</pre><p>Tests: <strong>8/8 ✅</strong> (incluye insertar dos veces el mismo código con ABORT, IGNORE y REPLACE).</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Índice único = clave primaria?</strong><br>No: la PK identifica la fila, es una sola y no admite NULL; un índice único solo evita repetidos.</p>
+<p><strong>2. ¿Problema de REPLACE por comodidad?</strong><br>Pierde la fila anterior sin avisar, cambia el id y puede disparar borrados en cascada.</p>
+<p><strong>3. ¿Los índices mejoran todo gratis?</strong><br>No: cuestan espacio y escrituras más lentas.</p>
+<p><strong>4. ¿Cómo comprobar que la restricción se cumple?</strong><br>Con un test que inserta dos veces el mismo valor (y en la base real, arriba).</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Restricción de unicidad demostrada con prueba; índice sobre <code>creadaEn</code> justificado porque todas las consultas ordenan por esa columna.</div>
+
+<h2 class="salto">Ejercicio 11 — Dos tablas: relación uno a muchos</h2>
+<p><strong>Consigna:</strong> Agregar <code>CategoriaEntity</code>; una categoría tiene muchas notas. Clave foránea, clase con <code>@Embedded</code> + <code>@Relation</code>. Desafío: política de borrado.<br>Rama: <code>ej11-relacion-uno-a-muchos</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Aparece una segunda tabla, <code>categorias</code>. Cada nota puede apuntar a una categoría. Si se borra una categoría, sus notas <strong>no se borran</strong>: quedan “sin categoría”.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>La clave foránea va del lado “muchos”:</strong> <code>notas.categoriaId</code> apunta a <code>categorias.id</code>.</li><li><strong>No se guarda una lista de notas dentro de la categoría:</strong> una columna guarda un solo valor; para eso está la otra tabla.</li><li><strong><code>SET_NULL</code></strong>: al borrar la categoría, las notas quedan con <code>categoriaId = NULL</code>. <code>CASCADE</code> las borraría; <code>RESTRICT</code> impediría borrar.</li><li><strong><code>CategoriaConNotas</code> no es una tabla:</strong> es una clase de lectura que Room arma juntando las dos.</li><li><strong><code>categoriaId</code> es nullable:</strong> una nota puede existir sin categoría.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>ForeignKey(entity = CategoriaEntity::class, parentColumns = ["id"],
+           childColumns = ["categoriaId"], onDelete = ForeignKey.SET_NULL)
+
+data class CategoriaConNotas(
+    @Embedded val categoria: CategoriaEntity,
+    @Relation(parentColumn = "id", entityColumn = "categoriaId") val notas: List&lt;NotaEntity&gt;
+)</pre><div class="figs"><figure><img src="img/ej11_categorias.png" style="height:250px"><br>Panel de categorías con sus notas</figure></div><pre>Antes:  1 Parcial DA1 → Facultad | 2 TP Rabbit → Facultad | 3 Lavar ropa → Casa
+Borrar "Facultad":
+sqlite&gt; SELECT id, titulo, categoriaId FROM notas;
+ 1  Parcial DA1   (NULL)     ← la nota sigue, sin categoría
+ 2  TP Rabbit     (NULL)
+ 3  Lavar ropa    2</pre><p>Tests: <strong>12/12 ✅</strong> (incluye el efecto de SET_NULL).</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Por qué no guardar la lista de notas en una columna?</strong><br>Rompe el modelo relacional: no se puede consultar ni filtrar, no hay integridad y hay que reescribir toda la lista.</p>
+<p><strong>2. ¿Dónde queda la clave foránea?</strong><br>En <code>notas.categoriaId</code>, el lado “muchos”.</p>
+<p><strong>3. ¿Qué pasa con las notas al borrar una categoría?</strong><br>Quedan sin categoría (SET_NULL): decisión de producto para no perder notas.</p>
+<p><strong>4. ¿Entidad vs clase de resultado relacional?</strong><br>La entidad tiene tabla y se inserta; <code>CategoriaConNotas</code> solo se lee.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Dos tablas relacionadas, consulta de categoría con sus notas y efecto del borrado decidido y probado.</div>
+
+<h2 class="salto">Ejercicio 12 — TypeConverters: cuando SQLite no conoce tu tipo</h2>
+<p><strong>Consigna:</strong> Reemplazar un campo primitivo por un tipo más expresivo (enum <code>Prioridad</code>), crear el <code>@TypeConverter</code> y verificar qué se guardó.<br>Rama: <code>ej12-typeconverters</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>SQLite no sabe qué es un enum. El <strong>TypeConverter</strong> le explica a Room cómo pasar <code>Prioridad.ALTA</code> a texto (<code>"ALTA"</code>) al guardar, y al revés al leer.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>SQLite solo tiene 4 tipos:</strong> INTEGER, REAL, TEXT, BLOB. Todo lo demás hay que convertirlo.</li><li><strong>Se guarda el nombre, no el número de orden:</strong> si se reordenara el enum, los ordinales cambiarían de significado.</li><li><strong>Renombrar una constante rompe datos viejos:</strong> las filas siguen diciendo “ALTA”. Haría falta una migración con UPDATE.</li><li><strong>Hay que registrar el converter</strong> con <code>@TypeConverters(Converters::class)</code> en la base.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>enum class Prioridad { BAJA, MEDIA, ALTA }      // domain/model/Prioridad.kt
+
+class Converters {
+    @TypeConverter fun prioridadAString(valor: Prioridad): String = valor.name
+    @TypeConverter fun stringAPrioridad(valor: String): Prioridad =
+        Prioridad.entries.firstOrNull { it.name == valor } ?: Prioridad.MEDIA
+}</pre><div class="figs"><figure><img src="img/ej12_prioridad.png" style="height:240px"><br>Selector de prioridad en el formulario</figure></div><pre>sqlite&gt; SELECT id, titulo, prioridad, typeof(prioridad) FROM notas;
+ 1  Parcial DA1    ALTA   text
+ 2  TP Rabbit      MEDIA  text
+ 3  Leer libro     BAJA   text</pre><p>Tests: <strong>14/14 ✅</strong> (<code>ConvertersTest</code> verifica el valor físico).</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Room guarda el enum completo?</strong><br>No: solo un String con el nombre de la constante.</p>
+<p><strong>2. ¿Y si ALTA se renombra a URGENTE?</strong><br>Las filas viejas dicen “ALTA”: hace falta migrar (<code>UPDATE … SET prioridad = 'URGENTE'</code>).</p>
+<p><strong>3. ¿Fecha como número o como texto?</strong><br>Número: compacto, ordena bien, sin ambigüedad de zona. Texto: legible pero ocupa más y depende del formato.</p>
+<p><strong>4. ¿Qué resuelve el TypeConverter y qué no?</strong><br>Resuelve la traducción en ambos sentidos; no resuelve la evolución de los datos ni valida el valor guardado.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Un tipo no soportado por SQLite se guarda y recupera; el valor físico (<code>text</code>) se verificó en la base.</div>
+
+<h2 class="salto">Ejercicio 13 — Transacciones: dos pasos que deberían ser uno</h2>
+<p><strong>Consigna:</strong> Operación de varios pasos: <strong>fusionar</strong> categorías (mover notas y borrar la vacía). Versión sin transacción vs con <code>@Transaction</code>; lectura relacional transaccional.<br>Rama: <code>ej13-transacciones</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Fusionar son dos escrituras. Si la app se cae entre una y otra, queda un estado a medias. Con una <strong>transacción</strong>, o se hacen las dos o ninguna.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>Atómico = todo o nada.</strong> Si falla un paso, se deshace todo (rollback).</li><li><strong>SQLite puede quedar “válido” pero la app no:</strong> una categoría vacía que debía borrarse no rompe ninguna regla de SQLite, pero sí la del negocio.</li><li><strong>Las transacciones también sirven para leer:</strong> categoría + sus notas son dos SELECT que deben ver la misma foto.</li><li><strong>Para probarlo se fuerza un fallo</strong> entre los dos pasos (<code>fallarEntrePasos = true</code>, solo en tests).</li><li><strong>El DAO pasó a clase abstracta</strong> para poder tener un método con cuerpo y <code>@Transaction</code>.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Transaction
+open suspend fun fusionar(origen: CategoriaEntity, destinoId: Int, fallarEntrePasos: Boolean = false) {
+    moverNotas(origen.id, destinoId)                  // paso 1: UPDATE notas
+    if (fallarEntrePasos) throw IllegalStateException("Fallo forzado entre los dos pasos")
+    eliminar(origen)                                  // paso 2: DELETE categoría
+}</pre><div class="figs"><figure><img src="img/ej13_fusionar.png" style="height:240px"><br>“Fusionar en…” Facultad</figure></div><pre>Fusionar "Personal" (3 notas) en "Facultad" (2 notas):
+sqlite&gt; SELECT * FROM categorias;              -&gt; 1 | Facultad   (Personal ya no existe)
+sqlite&gt; SELECT id, titulo, categoriaId FROM notas;   -&gt; las 5 notas con categoriaId = 1</pre><p>Tests: <strong>17/17 ✅</strong>. Con fallo forzado: <em>con</em> transacción las notas vuelven a su categoría (rollback); <em>sin</em> transacción quedan movidas y la categoría origen sigue existiendo.</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Qué significa atómica?</strong><br>Que se hace completa o no se hace.</p>
+<p><strong>2. ¿Una transacción sirve solo para escrituras?</strong><br>No: también para lecturas que necesitan consistencia entre varias consultas.</p>
+<p><strong>3. ¿Qué error deja la base válida para SQLite pero inválida para la app?</strong><br>Notas movidas y la categoría origen sin borrar: ninguna restricción se rompe, pero “fusionar” quedó a medias.</p>
+<p><strong>4. ¿Qué conviene probar forzando un fallo?</strong><br>El punto exacto entre los dos pasos: con transacción, rollback; sin ella, estado a medias.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Operación de dos pasos transaccional y explicación del estado inconsistente evitado (probado con fallo forzado).</div>
+
+<h2 class="salto">Ejercicio 14 — Migrar una base sin borrar lo anterior</h2>
+<p><strong>Consigna:</strong> Base con datos en versión 1; agregar <code>archivada: Boolean</code> (falso para las existentes), subir a versión 2, escribir y registrar la migración y comprobar que nada se perdió.<br>Rama: <code>ej14-migraciones</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong>Se cambia la tabla <strong>sin borrar los datos</strong> que el usuario ya tiene: una instrucción SQL agrega la columna nueva y Room la ejecuta una sola vez al abrir la base vieja.</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>El código compila igual aunque la base instalada sea vieja:</strong> son dos “verdades” distintas y Room las compara al abrir.</li><li><strong>Subir la versión sin migración</strong> hace que Room tire error (“A migration from 1 to 2 was required but not found”).</li><li><strong><code>fallbackToDestructiveMigration()</code></strong> “arregla” el error borrando todos los datos: <em>no</em> es la solución.</li><li><strong><code>DEFAULT 0</code></strong> es el valor que reciben las filas viejas; sin DEFAULT, SQLite no deja agregar una columna NOT NULL a una tabla con datos.</li><li><strong>No desinstalar para probar:</strong> desinstalar borra justamente la base vieja que hay que migrar.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+<pre>@Database(entities = [NotaEntity::class, CategoriaEntity::class], version = 2, exportSchema = true)
+
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE notas ADD COLUMN archivada INTEGER NOT NULL DEFAULT 0")
+    }
+}
+Room.databaseBuilder(...).addMigrations(MIGRATION_1_2).build()      // en NotasApp</pre><p><strong>Prueba real (sin desinstalar):</strong> se cargaron 5 notas con la rama 13 (versión 1) y se instaló la rama 14 <em>encima</em>.</p><pre>ANTES (rama 13):  PRAGMA user_version -&gt; 1   filas -&gt; 5
+                  columnas: id titulo contenido importante creadaEn colorEtiqueta codigoExterno categoriaId prioridad
+DESPUÉS (rama 14, misma instalación):
+sqlite&gt; PRAGMA user_version;   -&gt; 2
+sqlite&gt; SELECT id, titulo, prioridad, archivada FROM notas;
+ 1 Parcial DA1    ALTA  0
+ 2 TP Rabbit      MEDIA 0
+ 3 Leer libro     BAJA  0
+ 4 Turno medico   ALTA  0
+ 5 Comprar yerba  BAJA  0</pre><div class="figs"><figure><img src="img/ej14_migrada.png" style="height:240px"><br>Tras migrar: las 5 notas + chip “Archivadas”</figure></div><p>Además, <code>MigrationTest</code> crea una base v1 con el esquema exportado (<code>app/schemas/…/1.json</code>), la migra y valida: tests <strong>19/19 ✅</strong>.</p>
+<h3>Preguntas de la guía</h3>
+<p><strong>1. ¿Por qué cambiar una Entity puede requerir migración aunque compile?</strong><br>El código compila contra la clase, pero la base del celular tiene el esquema viejo; Room los compara al abrir.</p>
+<p><strong>2. ¿Y si se sube la versión sin camino de migración?</strong><br>Room lanza IllegalStateException; la salida destructiva borraría los datos.</p>
+<p><strong>3. ¿Qué valor deben tener las filas viejas en la columna nueva?</strong><br>0 (no archivadas): el comportamiento que tenían antes.</p>
+<p><strong>4. ¿Por qué la migración es diseño de datos?</strong><br>Decide qué pasa con la información de personas reales al actualizar; no es un detalle de build.</p>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ La base pasó de versión 1 a 2 conservando los datos, demostrado con filas antes y después.</div>
+
+<h2 class="salto">Ejercicio 15 — Miniaplicación integradora: primero local, después vemos</h2>
+<p><strong>Consigna:</strong> App que tenga sentido sin red, con Room como fuente local real: CRUD, observación reactiva, al menos dos entidades relacionadas y una migración comprobable. Etapas 1 a 5.<br>Rama: <code>ej15-miniapp-integradora</code></p>
+<div class="caja pocas"><strong class="titulo">En pocas palabras</strong><strong>Registro de objetos prestados</strong>: qué presté, a quién y cuándo. Dos tablas (<code>personas</code> y <code>prestamos</code>), búsqueda, filtro de pendientes, devolver, editar, borrar con deshacer y una migración real (versión 1 → 2).</div>
+<div class="caja novato"><strong class="titulo">Aclaraciones para novatos</strong><ul><li><strong>“Local-first”</strong>: la pantalla lee de Room, así que la app funciona sin internet. Un servidor, si existiera, sería una copia que se sincroniza.</li><li><strong><code>RESTRICT</code></strong>: no se puede borrar una persona que tiene préstamos (el historial es lo valioso).</li><li><strong>Nombre de persona único</strong>: “Prestar” busca a la persona por nombre y la crea solo si no existe, dentro de una transacción.</li><li><strong>Los días prestados no se guardan</strong>: se calculan con la fecha; guardarlos quedaría desactualizado al día siguiente.</li><li><strong>El estado (PRESTADO / DEVUELTO) es un enum</strong> guardado como texto con un TypeConverter, como en el Ej 12.</li></ul></div>
+<h3>Explicación y pruebas</h3>
+
+<h3>Etapa 1 · Modelo</h3><pre>personas                         prestamos
++----+--------+                  +----+--------+-----------+---------------+---------+-------+
+| id | nombre |  1 --------- N   | id | objeto | personaId | fechaPrestamo | estado  | notas |
++----+--------+                  +----+--------+-----------+---------------+---------+-------+
+PK id, UNIQUE(nombre)            PK id, FK personaId -&gt; personas.id (ON DELETE RESTRICT)
+                                 índices: personaId ; (estado, fechaPrestamo)</pre>
+<p><strong>Dato que no se persiste:</strong> los días que lleva prestado (se calculan) y todo el estado de UI. <strong>Regla protegida:</strong> nombre único y FK con RESTRICT.</p>
+<h3>Etapas 2 y 3 · Persistencia y uso cotidiano</h3><pre>@Transaction
+open suspend fun prestar(nombrePersona: String, objeto: String, ahora: Long, notas: String = ""): Long {
+    val existente = buscarPersonaPorNombre(nombrePersona)
+    val personaId = existente?.id ?: insertarPersona(PersonaEntity(nombre = nombrePersona)).toInt()
+    return insertarPrestamo(PrestamoEntity(objeto = objeto, personaId = personaId, fechaPrestamo = ahora, notas = notas))
+}</pre><div class="figs"><figure><img src="img/ej15_lista.png" style="height:260px"><br>Préstamos: Taladro y Libro → Juan, Carpa → Ana</figure></div><pre>sqlite&gt; PRAGMA user_version;  -&gt; 2
+sqlite&gt; SELECT * FROM personas;           -&gt; 1 Juan | 2 Ana      (Juan una sola vez)
+sqlite&gt; SELECT p.objeto, pe.nombre, p.estado FROM prestamos p JOIN personas pe ON pe.id = p.personaId;
+ Taladro       Juan  PRESTADO
+ Libro Kotlin  Juan  PRESTADO
+ Carpa         Ana   PRESTADO</pre>
+<p>Funciones: crear, listar reactivo (Flow), editar, eliminar con confirmación + deshacer, buscar por objeto, filtrar pendientes, mostrar la relación
+(cada préstamo muestra la persona) y sobrevivir a un reinicio.</p>
+<h3>Etapa 4 · Arquitectura y cambio de esquema</h3>
+<p><code>UI → PrestamosViewModel → PrestamosRepository → PrestamosDao → Room</code>. Versión 1 → 2 agrega <code>prestamos.notas TEXT NOT NULL DEFAULT ''</code>
+(<code>data/local/PrestamosMigrations.kt</code>), probada en <code>PrestamosMigrationTest</code>. Tests de la rama: <strong>5/5 ✅</strong>.</p>
+<h3>Etapa 5 · Mirar la app como producto</h3>
+<table><tr><th style="width:36%">Pregunta</th><th>Respuesta</th></tr>
+<tr><td>¿Qué dato sería costoso perder a los seis meses?</td><td>Los préstamos pendientes: quién tiene qué desde cuándo, justo lo que no se recuerda de memoria.</td></tr>
+<tr><td>¿Qué pasaría con sincronización?</td><td>Dos copias del dato y conflictos que resolver; los ids locales no sirven como identidad global (haría falta un UUID). Lo coordinaría el Repository.</td></tr>
+<tr><td>¿Fuente de verdad sin red?</td><td>Room. El servidor sería una réplica (local-first).</td></tr>
+<tr><td>¿Error de persistencia peor que uno visual?</td><td>Perder o corromper préstamos (migración destructiva, REPLACE, cascada accidental): un registro perdido no vuelve.</td></tr></table>
+<div class="caja regla"><strong class="titulo">Criterio de finalización</strong>✅ Room como fuente local real, CRUD, observación reactiva, dos entidades relacionadas (1:N con RESTRICT) y una migración comprobable. Tablas en Database Inspector: <code>personas</code>, <code>prestamos</code> y <code>room_master_table</code> (interna de Room, guarda el hash del esquema).</div>
+
+</body>
+</html>
