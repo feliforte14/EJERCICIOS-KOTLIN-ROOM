@@ -1,7 +1,7 @@
 # Ejercicio 15 - Miniapp integradora: objetos prestados (local-first)
 
 Registro de objetos que presté y a quién. Funciona sin red: la fuente de datos de la pantalla es Room (`prestamos.db`).
-Código en `app/src/main/java/com/example/ejercicioskotlinroom/prestamos/`.
+Código en `app/src/main/java/com/example/ejercicioskotlinroom/ (data/local, data/repository, presentation/prestamos)`.
 
 ## Etapa 1 - Modelo
 
